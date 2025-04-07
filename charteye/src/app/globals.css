@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer base {
+  .glass-panel {
+    @apply bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-lg rounded-lg shadow-lg;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-all duration-200;
+  }
+  
+  /* Trading Insights Chat Styling */
+  .prose-invert code {
+    @apply bg-gray-700 text-gray-200 px-1 py-0.5 rounded text-sm;
+  }
+  
+  .prose-invert strong {
+    @apply text-blue-300;
+  }
+  
+  .prose-invert a {
+    @apply text-blue-400 hover:text-blue-300 underline;
+  }
+  
+  .prose-invert ul {
+    @apply space-y-1 mb-3;
+  }
+  
+  .prose-invert ol {
+    @apply space-y-1 mb-3;
+  }
+}
+

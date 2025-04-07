@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow all operations to all collections during development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Explicitly allow operations on specific collections
+    match /chartAnalyses/{documentId} {
+      allow read, write: if true;
+    }
+    
+    match /userProfiles/{documentId} {
+      allow read, write: if true;
+    }
+    
+    match /sharedAnalyses/{documentId} {
+      allow read, write: if true;
+    }
+  }
+} 

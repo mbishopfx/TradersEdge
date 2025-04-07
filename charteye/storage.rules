@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow all operations to all files during development
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // Explicitly allow access to chart images
+    match /charts/{userId}/{filename} {
+      allow read, write: if true;
+    }
+  }
+} 

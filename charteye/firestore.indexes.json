@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "chartAnalyses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sharedAnalyses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "analysisId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+} 
