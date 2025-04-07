@@ -1,0 +1,20 @@
+{
+  "name": "charteye-root",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Root package for ChartEye project",
+  "scripts": {
+    "dev": "cd charteye && npm run dev",
+    "build": "cd charteye && npm run build",
+    "start": "cd charteye && npm run start",
+    "lint": "cd charteye && npm run lint",
+    "test:payment": "node testPaymentPrompt.js",
+    "test:payment:ui": "bash runPaymentPromptTest.sh",
+    "test:auth-payment": "bash run-auth-payment-test.sh",
+    "test:upgrade": "node test-payment-upgrade.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "puppeteer": "^22.9.1"
+  }
+} 
