@@ -372,7 +372,7 @@ export default function UpgradePage() {
       </div>
       
       <div className="mt-12 text-center text-sm text-gray-400">
-        <p>Have questions about upgrading? <a href="mailto:support@charteye.com" className="text-blue-400 hover:underline">Contact our support team</a></p>
+        <p>Have questions about upgrading? <a href="mailto:support@tradertools.com" className="text-blue-400 hover:underline">Contact our support team</a></p>
       </div>
     </div>
   );

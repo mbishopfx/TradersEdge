@@ -6,7 +6,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'charteye-5be44.firebasestorage.app',
+        hostname: 'tradertools-5be44.firebasestorage.app',
       },
       {
         protocol: 'https',

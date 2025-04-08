@@ -8,8 +8,8 @@ import Navigation from "@/components/Navigation";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChartEye - AI Trading Chart Analyst",
-  description: "Advanced AI-driven web application for analyzing trading charts and generating technical indicators",
+  title: "TraderTools - AI Trading Analyst",
+  description: "Advanced AI-driven web application for analyzing trading charts and generating insights",
 };
 
 export default function RootLayout({

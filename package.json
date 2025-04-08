@@ -14,7 +14,8 @@
     "test:upgrade": "node test-payment-upgrade.js"
   },
   "dependencies": {
+    "@langchain/community": "^0.3.39",
     "node-fetch": "^2.6.7",
     "puppeteer": "^22.9.1"
   }
-} 
+}

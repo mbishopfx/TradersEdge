@@ -14,11 +14,42 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const { user } = useAuth();
   const [isHovering, setIsHovering] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Handle mounting state
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Floating animation for background elements
+  const floatingAnimation = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatType: "reverse" as const
+      }
+    }
+  };
+
+  // Staggered text animation
+  const textAnimation = {
+    hidden: { opacity: 0 },
+    visible: (i: number) => ({
+      opacity: 1,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5
+      }
+    })
+  };
 
   const container = {
     hidden: { opacity: 0 },
@@ -102,6 +133,11 @@ export default function Home() {
     }
   ];
 
+  // Don't render anything until after client-side hydration
+  if (!isMounted) {
+    return null;
+  }
+
   return (
     <div className="space-y-16 pb-20">
       {/* Hero Section */}
@@ -110,6 +146,56 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-indigo-900/20"></div>
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
+          
+          {/* Animated background elements */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: 1,
+              y: [0, 15, 0]
+            }}
+            transition={{ 
+              opacity: { duration: 1 },
+              y: {
+                duration: 6, 
+                repeat: Infinity,
+                ease: "easeInOut" 
+              }
+            }}
+            className="absolute top-1/4 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
+          />
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: 1,
+              y: [0, -20, 0]
+            }}
+            transition={{ 
+              opacity: { duration: 1 },
+              y: {
+                duration: 7, 
+                repeat: Infinity,
+                ease: "easeInOut" 
+              }
+            }}
+            className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"
+          />
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: 1,
+              y: [0, 10, 0]
+            }}
+            transition={{ 
+              opacity: { duration: 1 },
+              y: {
+                duration: 5, 
+                repeat: Infinity,
+                ease: "easeInOut" 
+              }
+            }}
+            className="absolute top-2/3 left-1/3 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl"
+          />
         </div>
         
         <div className="relative z-10">
@@ -119,17 +205,30 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="text-center space-y-6 max-w-4xl mx-auto px-4"
           >
-            <motion.h1 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ 
-                duration: 0.8,
-                ease: "easeOut"
-              }}
-              className="text-5xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-indigo-400"
+              transition={{ duration: 0.5 }}
+              className="inline-block relative"
             >
-              ChartEye
-            </motion.h1>
+              <motion.span
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
+              />
+              <motion.h1 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ 
+                  duration: 0.8,
+                  ease: "easeOut"
+                }}
+                className="text-5xl md:text-6xl font-bold animated-gradient"
+              >
+                TraderTools
+              </motion.h1>
+            </motion.div>
             
             <motion.p 
               initial={{ opacity: 0 }}
@@ -139,6 +238,36 @@ export default function Home() {
             >
               AI-powered chart analysis, risk management, and trading insights for modern traders
             </motion.p>
+
+            {/* Animated underline */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "150px" }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+              className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"
+            />
+
+            {/* Floating badges */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.7 }}
+              className="flex flex-wrap justify-center gap-2 mt-4"
+            >
+              {["AI Analysis", "Risk Management", "Pattern Recognition", "Trading Insights"].map((badge, index) => (
+                <motion.span 
+                  key={badge}
+                  custom={index}
+                  variants={textAnimation}
+                  initial="hidden"
+                  animate="visible"
+                  whileHover={{ y: -5 }}
+                  className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-sm text-gray-200"
+                >
+                  {badge}
+                </motion.span>
+              ))}
+            </motion.div>
             
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -147,25 +276,25 @@ export default function Home() {
               className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
             >
               {user ? (
-                <Link href="/analysis" className="btn-primary px-8 py-3 text-lg">
-                  Start Analyzing
-                </Link>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link href="/analysis" className="btn-primary px-8 py-3 text-lg">
+                    Start Analyzing
+                  </Link>
+                </motion.div>
               ) : (
-                <Link href="#pricing" className="btn-primary px-8 py-3 text-lg">
-                  Get Started
-                </Link>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link href="#pricing" className="btn-primary px-8 py-3 text-lg">
+                    Get Started
+                  </Link>
+                </motion.div>
               )}
-              <Link href="#features" className="btn-secondary px-8 py-3 text-lg">
-                Explore Features
-              </Link>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link href="#features" className="btn-secondary px-8 py-3 text-lg">
+                  Explore Features
+                </Link>
+              </motion.div>
             </motion.div>
           </motion.div>
-        </div>
-        
-        {/* Background Animation Elements */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"></div>
         </div>
       </section>
 
@@ -191,10 +320,14 @@ export default function Home() {
           viewport={{ once: true }}
           className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {features.map((feature) => (
+          {features.map((feature, index) => (
             <motion.div
               key={feature.id}
               variants={item}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
               className="relative glass-panel p-6 rounded-lg transition-all duration-300 overflow-hidden group"
               onMouseEnter={() => setIsHovering(feature.id)}
               onMouseLeave={() => setIsHovering(null)}
@@ -202,7 +335,13 @@ export default function Home() {
               <Link href={feature.href} className="absolute inset-0 z-10" aria-label={feature.name}></Link>
               
               <div className="relative z-0">
-                <feature.icon className={`w-12 h-12 ${feature.color} mb-4`} />
+                <motion.div
+                  initial={{ scale: 1 }}
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <feature.icon className={`w-12 h-12 ${feature.color} mb-4`} />
+                </motion.div>
                 <h3 className="text-xl font-semibold mb-2">{feature.name}</h3>
                 <p className="text-gray-300">{feature.description}</p>
               </div>
@@ -217,11 +356,19 @@ export default function Home() {
                 className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-600/30 rounded-lg"
               />
               
-              <div className={`absolute bottom-4 right-4 ${isHovering === feature.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
+              <motion.div 
+                className="absolute bottom-4 right-4"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ 
+                  opacity: isHovering === feature.id ? 1 : 0,
+                  x: isHovering === feature.id ? 0 : 10
+                }}
+                transition={{ duration: 0.3 }}
+              >
                 <span className="text-sm text-white font-medium px-3 py-1 rounded-full bg-blue-500/20 backdrop-blur-sm">
                   Explore →
                 </span>
-              </div>
+              </motion.div>
             </motion.div>
           ))}
         </motion.div>
@@ -237,7 +384,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How ChartEye Works</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How TraderTools Works</h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               Powerful AI analysis at your fingertips in three simple steps
             </p>
@@ -403,7 +550,7 @@ export default function Home() {
           className="text-center mt-8 text-gray-400 text-sm"
         >
           <p>All plans include our standard security features and regular platform updates.</p>
-          <p className="mt-2">Need custom enterprise solutions? <a href="mailto:contact@charteye.com" className="text-blue-400 hover:underline">Contact us</a></p>
+          <p className="mt-2">Need custom enterprise solutions? <a href="mailto:contact@tradertools.com" className="text-blue-400 hover:underline">Contact us</a></p>
         </motion.div>
       </section>
 
@@ -424,7 +571,7 @@ export default function Home() {
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Trading?</h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Join thousands of traders using ChartEye to gain an edge in the markets
+              Join thousands of traders using TraderTools to gain an edge in the markets
             </p>
           </motion.div>
           
@@ -456,7 +603,7 @@ export default function Home() {
         <div className="text-sm text-gray-400 p-6 border border-gray-800 rounded-lg">
           <h3 className="font-medium mb-2">Disclaimer:</h3>
           <p>
-            ChartEye provides AI-generated analysis for informational and educational purposes only.
+            TraderTools provides AI-generated analysis for informational and educational purposes only.
             It does NOT constitute financial or investment advice. Trading involves substantial risk of loss.
             Users are solely responsible for their own trading decisions. Past performance is not indicative of future results.
           </p>

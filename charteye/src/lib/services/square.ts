@@ -52,7 +52,7 @@ export async function createPaymentLink(userId: string): Promise<string> {
         },
         checkout_options: {
           redirect_url: `${appUrl}/upgrade?status=success&user_id=${userId}`,
-          merchant_support_email: 'support@charteye.com'
+          merchant_support_email: 'support@tradertools.com'
         }
       })
     });
