@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { OpenAI } from 'openai';
+import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchMarketData, formatMarketDataForAI } from '@/lib/services/marketData';
 
@@ -18,12 +18,18 @@ type NewsHeadline = {
   timestamp: string;
 }
 
-type NewsAnalysis = {
+interface NewsAnalysis {
   id: string;
   category: 'market-impact' | 'sector-analysis' | 'trend-prediction' | 'summary';
   title: string;
   content: string;
   timestamp: string;
+  currency?: string;
+}
+
+interface AnalysisResponse {
+  analyses: NewsAnalysis[];
+  nextUpdateTime: string;
 }
 
 // Path to news data directory - handle both local and SiteGround environments
@@ -132,182 +138,163 @@ async function readNewsData() {
 }
 
 // Generate AI analysis from news data
-async function generateNewsAnalysis(headlines: string[], snippets: string[]) {
+async function generateNewsAnalysis(headlines: string[], snippets: string[], currency: string): Promise<AnalysisResponse> {
   // Safety check
   if (!headlines || headlines.length === 0) {
-    console.log('[Live News API] No headlines available for analysis');
-    return generateMockAnalysis([]);
-  }
-
-  // Check for OpenAI key
-  if (!process.env.OPENAI_API_KEY) {
-    console.log('[Live News API] OpenAI API key not found, using mock data');
+    console.warn('[Live News API] No headlines provided for analysis');
     return generateMockAnalysis(headlines);
   }
-  
+
   try {
-    // Get current market data to incorporate into the analysis
-    const marketData = await fetchMarketData();
-    const marketContext = formatMarketDataForAI(marketData);
+    const timestamp = new Date().toISOString();
     
-    // Combined content from headlines and snippets
-    const newsContent = [
-      "HEADLINES:",
-      ...headlines.slice(0, 10).map((h, i) => `${i+1}. ${h}`),
-      "\nSNIPPETS:",
-      ...snippets.slice(0, 5).map((s, i) => `${i+1}. ${s.substring(0, 300)}...`)
-    ].join("\n");
+    // Prepare the prompt for OpenAI
+    const prompt = `Analyze the following financial news headlines and snippets specifically for ${currency} (${getCurrencyFullName(currency)}):
     
-    console.log('[Live News API] Sending analysis request to OpenAI');
-    
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Using 3.5-turbo for cost efficiency, change to gpt-4 if needed
+Headlines:
+${headlines.join('\n')}
+
+${snippets.length > 0 ? `Additional Context:\n${snippets.join('\n')}` : ''}
+
+Please provide a comprehensive analysis including:
+1. A brief market summary focusing on ${currency}
+2. Market impact analysis specific to ${currency}
+3. Sector analysis related to ${currency}
+4. Short-term trend prediction for ${currency}
+
+Format the response as a JSON object with the following structure:
+{
+  "marketSummary": "string",
+  "marketImpact": "string",
+  "sectorAnalysis": "string",
+  "trendPrediction": "string"
+}`;
+
+    // Call OpenAI API
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-turbo-preview",
       messages: [
         {
           role: "system",
-          content: `You are an expert financial news analyst. Analyze recent financial news headlines and create 4 concise analyses:
-          1. Market Summary: A brief summary of the overall market situation based on the news.
-          2. Market Impact: How these news items could impact major indices and asset classes.
-          3. Sector Analysis: Which sectors might be most affected by these developments.
-          4. Trend Prediction: What trends or market movements might develop based on this news.
-          Format responses in JSON. Keep each analysis concise - no more than 2-3 sentences.`
+          content: "You are a financial analyst specializing in currency and market analysis. Provide concise, data-driven insights."
         },
         {
           role: "user",
-          content: `Please analyze these financial news items:\n\n${newsContent}\n\nCurrent market context:\n${marketContext}`
+          content: prompt
         }
       ],
-      max_tokens: 1000,
-      response_format: { type: "json_object" }
+      temperature: 0.7,
+      max_tokens: 1000
     });
 
-    const responseContent = response.choices[0]?.message?.content || '{}';
-    console.log('[Live News API] Received response from OpenAI');
-    
-    // Try to parse the response as JSON, with fallback
+    // Parse the response
+    const analysisText = completion.choices[0]?.message?.content || '';
     let analysisData;
+    
     try {
-      analysisData = JSON.parse(responseContent);
+      analysisData = JSON.parse(analysisText);
     } catch (parseError) {
       console.error('[Live News API] Error parsing OpenAI response:', parseError);
-      console.log('[Live News API] Falling back to mock data due to parse error');
       return generateMockAnalysis(headlines);
     }
-    
-    const timestamp = new Date().toISOString();
-    
-    return [
-      {
-        id: uuidv4(),
-        category: 'summary',
-        title: 'Market Summary',
-        content: analysisData.marketSummary || analysisData.summary || 'Summary not available',
-        timestamp
-      },
-      {
-        id: uuidv4(),
-        category: 'market-impact',
-        title: 'Market Impact Analysis',
-        content: analysisData.marketImpact || 'Impact analysis not available',
-        timestamp
-      },
-      {
-        id: uuidv4(),
-        category: 'sector-analysis',
-        title: 'Sector Analysis',
-        content: analysisData.sectorAnalysis || 'Sector analysis not available',
-        timestamp
-      },
-      {
-        id: uuidv4(),
-        category: 'trend-prediction',
-        title: 'Trend Prediction',
-        content: analysisData.trendPrediction || 'Trend prediction not available',
-        timestamp
-      }
-    ];
+
+    // Calculate next update time (15 minutes from now)
+    const nextUpdateTime = new Date();
+    nextUpdateTime.setMinutes(nextUpdateTime.getMinutes() + 15);
+
+    return {
+      analyses: [
+        {
+          id: uuidv4(),
+          category: 'summary',
+          title: `${currency} Market Summary`,
+          content: analysisData.marketSummary || analysisData.summary || 'Summary not available',
+          timestamp,
+          currency
+        },
+        {
+          id: uuidv4(),
+          category: 'market-impact',
+          title: `${currency} Market Impact Analysis`,
+          content: analysisData.marketImpact || 'Impact analysis not available',
+          timestamp,
+          currency
+        },
+        {
+          id: uuidv4(),
+          category: 'sector-analysis',
+          title: `${currency} Sector Analysis`,
+          content: analysisData.sectorAnalysis || 'Sector analysis not available',
+          timestamp,
+          currency
+        },
+        {
+          id: uuidv4(),
+          category: 'trend-prediction',
+          title: `${currency} Trend Prediction`,
+          content: analysisData.trendPrediction || 'Trend prediction not available',
+          timestamp,
+          currency
+        }
+      ],
+      nextUpdateTime: nextUpdateTime.toISOString()
+    };
   } catch (error) {
     console.error('[Live News API] Error generating news analysis:', error);
     return generateMockAnalysis(headlines);
   }
 }
 
+// Helper function to get full currency name
+function getCurrencyFullName(currency: string): string {
+  const currencyNames: { [key: string]: string } = {
+    'XAU': 'Gold',
+    'USD': 'US Dollar',
+    'EUR': 'Euro',
+    'GBP': 'British Pound',
+    'JPY': 'Japanese Yen'
+  };
+  return currencyNames[currency] || currency;
+}
+
 // Generate mock analysis for development or if OpenAI fails
-function generateMockAnalysis(headlines: string[]) {
+function generateMockAnalysis(headlines: string[]): AnalysisResponse {
   const timestamp = new Date().toISOString();
-  console.log('[Live News API] Generating mock analysis data');
+  const nextUpdateTime = new Date(Date.now() + 15 * 60 * 1000);
   
-  // Try to personalize mock data based on headlines if available
-  let marketSentiment = 'neutral';
-  if (headlines.length > 0) {
-    const positiveWords = ['rise', 'gain', 'jump', 'up', 'higher', 'bullish', 'growth', 'positive'];
-    const negativeWords = ['fall', 'drop', 'decline', 'down', 'lower', 'bearish', 'recession', 'negative'];
-    
-    let positiveCount = 0;
-    let negativeCount = 0;
-    
-    for (const headline of headlines) {
-      const lowerHeadline = headline.toLowerCase();
-      for (const word of positiveWords) {
-        if (lowerHeadline.includes(word)) positiveCount++;
+  return {
+    analyses: [
+      {
+        id: uuidv4(),
+        category: 'summary',
+        title: 'Market Summary',
+        content: 'Mock market summary data',
+        timestamp
+      },
+      {
+        id: uuidv4(),
+        category: 'market-impact',
+        title: 'Market Impact Analysis',
+        content: 'Mock market impact analysis',
+        timestamp
+      },
+      {
+        id: uuidv4(),
+        category: 'sector-analysis',
+        title: 'Sector Analysis',
+        content: 'Mock sector analysis',
+        timestamp
+      },
+      {
+        id: uuidv4(),
+        category: 'trend-prediction',
+        title: 'Trend Prediction',
+        content: 'Mock trend prediction',
+        timestamp
       }
-      for (const word of negativeWords) {
-        if (lowerHeadline.includes(word)) negativeCount++;
-      }
-    }
-    
-    if (positiveCount > negativeCount) marketSentiment = 'positive';
-    else if (negativeCount > positiveCount) marketSentiment = 'negative';
-  }
-  
-  const mockAnalyses = [
-    {
-      id: uuidv4(),
-      category: 'summary' as const,
-      title: 'Market Summary',
-      content: marketSentiment === 'positive' 
-        ? 'Markets are showing strength following positive economic data and corporate earnings. Investor sentiment appears optimistic despite lingering inflation concerns.'
-        : marketSentiment === 'negative'
-          ? 'Markets are facing headwinds due to disappointing economic reports and geopolitical tensions. Investors remain cautious amid concerns about monetary policy tightening.'
-          : 'Markets are showing mixed signals following recent central bank comments and economic data releases. Investors remain cautious amid ongoing inflation concerns.',
-      timestamp
-    },
-    {
-      id: uuidv4(),
-      category: 'market-impact' as const,
-      title: 'Market Impact Analysis',
-      content: marketSentiment === 'positive'
-        ? 'Equity indices appear poised for further gains with technology and cyclical sectors leading. Bond yields may rise as investors reduce safe-haven positions in favor of riskier assets.'
-        : marketSentiment === 'negative'
-          ? 'Equity indices may face downward pressure in the near term, particularly in growth sectors. Bond markets could see inflows as investors seek safety amid uncertainty.'
-          : 'Equity indices may experience increased volatility with a slight negative bias. Bond yields could stabilize as rate hike expectations have been largely priced in.',
-      timestamp
-    },
-    {
-      id: uuidv4(),
-      category: 'sector-analysis' as const,
-      title: 'Sector Analysis',
-      content: marketSentiment === 'positive'
-        ? 'Technology and consumer discretionary sectors should benefit from improved sentiment and spending. Financial stocks may also perform well in a rising rate environment.'
-        : marketSentiment === 'negative'
-          ? 'Defensive sectors like utilities, healthcare, and consumer staples may outperform. Technology and consumer discretionary stocks face challenges from reduced spending and higher rates.'
-          : 'Financial and technology sectors appear most vulnerable to near-term pressure. Defensive sectors like utilities and consumer staples may outperform in this environment.',
-      timestamp
-    },
-    {
-      id: uuidv4(),
-      category: 'trend-prediction' as const,
-      title: 'Trend Prediction',
-      content: marketSentiment === 'positive'
-        ? 'Look for continuation of the recent uptrend with potential breakouts above key resistance levels. Dollar weakness may persist as risk appetite improves and capital flows to emerging markets.'
-        : marketSentiment === 'negative'
-          ? 'Markets may test recent support levels with increased selling pressure. Safe-haven currencies like the USD and JPY could strengthen as risk aversion increases.'
-          : 'Watch for consolidation in major indices with potential support tests. Currency markets suggest dollar strength may continue as safe-haven flows persist.',
-      timestamp
-    }
-  ];
-  
-  return mockAnalyses;
+    ],
+    nextUpdateTime: nextUpdateTime.toISOString()
+  };
 }
 
 // Format headlines for response
@@ -324,9 +311,13 @@ function formatHeadlines(headlines: string[], lastScrape: string | null): NewsHe
   }));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     console.log('[Live News API] Processing request');
+    
+    // Get currency from query parameters
+    const { searchParams } = new URL(request.url);
+    const currency = searchParams.get('currency') || 'XAU';
     
     // Read news data
     const { headlines, snippets, lastScrape } = await readNewsData();
@@ -335,24 +326,29 @@ export async function GET() {
     const formattedHeadlines = formatHeadlines(headlines || [], lastScrape);
     
     // Generate analysis if we have headlines
-    const analyses = await generateNewsAnalysis(headlines || [], snippets || []);
+    const { analyses, nextUpdateTime } = await generateNewsAnalysis(headlines || [], snippets || [], currency);
     
-    console.log(`[Live News API] Returning ${formattedHeadlines.length} headlines and ${analyses.length} analyses`);
+    console.log(`[Live News API] Returning ${formattedHeadlines.length} headlines and ${analyses.length} analyses for ${currency}`);
     
     // Return data
     return NextResponse.json({
       headlines: formattedHeadlines,
       analyses,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      nextUpdateTime
     });
   } catch (error) {
     console.error('[Live News API] Error in live-news API:', error);
     
+    // Generate mock data with the new structure
+    const mockData = generateMockAnalysis([]);
+    
     // Return error response with fallback mock data
     return NextResponse.json({
       headlines: [],
-      analyses: generateMockAnalysis([]),
+      analyses: mockData.analyses,
       lastUpdated: new Date().toISOString(),
+      nextUpdateTime: mockData.nextUpdateTime,
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         note: 'Using fallback data due to error'
