@@ -20,31 +20,34 @@
     "@langchain/textsplitters": "^0.1.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
+    "autoprefixer": "^10.4.21",
     "dotenv": "^16.4.7",
     "firebase": "^11.6.0",
-    "firebase-admin": "^13.2.0",
+    "firebase-admin": "^12.0.0",
     "framer-motion": "^12.6.3",
     "langchain": "^0.3.20",
     "lucide-react": "^0.487.0",
     "next": "^15.2.4",
     "openai": "^4.92.0",
+    "postcss": "^8.4.35",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.5.2",
     "react-syntax-highlighter": "^15.6.1",
     "square": "^42.0.1",
+    "tailwindcss": "^3.4.17",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.21",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",
     "firebase-tools": "^14.1.0",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
