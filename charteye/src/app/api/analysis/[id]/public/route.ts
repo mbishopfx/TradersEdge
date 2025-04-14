@@ -4,8 +4,16 @@ import { getChartAnalysis } from '@/lib/services/firebase';
 // Enable developer mode if needed
 const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 
-export const dynamic = 'force-static';
+// This is required for static export
+export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Revalidate every hour
+
+// This is required for static export with dynamic routes
+export async function generateStaticParams() {
+  // Return an empty array since we don't know the IDs at build time
+  // The pages will be generated on-demand
+  return [];
+}
 
 export async function GET(
   request: Request,
