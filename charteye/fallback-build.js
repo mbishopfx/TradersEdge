@@ -2,12 +2,22 @@
 // if the normal CLI-based build fails
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 console.log('=== FALLBACK BUILD SCRIPT ===');
 console.log('Using direct Next.js import instead of CLI');
 
 // Set NODE_ENV to production
 process.env.NODE_ENV = 'production';
+
+// Make sure dependencies are installed with legacy peer deps
+try {
+  console.log('Ensuring dependencies are installed with --legacy-peer-deps...');
+  execSync('npm install --legacy-peer-deps', { stdio: 'inherit' });
+} catch (error) {
+  console.error('Failed to install dependencies:', error);
+  // Continue anyway, as they might already be installed
+}
 
 // Try to directly use Next.js
 try {

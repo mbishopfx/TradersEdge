@@ -9,7 +9,7 @@ echo "Directory contents: $(ls -la)"
 
 # Install dependencies
 echo "=== Installing dependencies ==="
-npm install
+npm install --legacy-peer-deps
 
 echo "=== Checking for Next.js installation ==="
 npm list next

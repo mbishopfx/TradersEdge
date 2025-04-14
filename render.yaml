@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: charteye
-    buildCommand: npm install && NODE_ENV=production npx next build
+    buildCommand: npm install --legacy-peer-deps && NODE_ENV=production npx next build
     startCommand: NODE_ENV=production node server.js
     envVars:
       - key: NODE_ENV
