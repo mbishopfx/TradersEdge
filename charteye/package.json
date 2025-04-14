@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node simple-server.js",
     "lint": "next lint"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
     "dotenv": "^16.4.7",
+    "express": "^4.18.3",
     "firebase": "^11.6.0",
     "firebase-admin": "^12.0.0",
     "framer-motion": "^12.6.3",

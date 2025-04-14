@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // swcMinify removed for compatibility
   
   // Production build optimizations for App Router
   output: 'export', // Export static files instead of 'standalone'
@@ -34,23 +33,6 @@ const nextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     unoptimized: true, // Required for static export
-  },
-
-  // Handle dynamic API routes in static export
-  experimental: {
-    appDir: true,
-  },
-  
-  // Configure which routes should be handled by the static export
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/analysis/:id/public',
-          destination: '/api/analysis/[id]/public',
-        },
-      ],
-    };
   },
 };
 

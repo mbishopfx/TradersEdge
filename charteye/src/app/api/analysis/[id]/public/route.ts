@@ -4,8 +4,8 @@ import { getChartAnalysis } from '@/lib/services/firebase';
 // Enable developer mode if needed
 const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 
-// This is required for static export
-export const dynamic = 'force-dynamic';
+// For static export, we need to handle this differently
+export const dynamic = 'force-static';
 export const revalidate = 3600; // Revalidate every hour
 
 // This is required for static export with dynamic routes
