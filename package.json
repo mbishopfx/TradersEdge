@@ -5,8 +5,8 @@
   "description": "Root package for ChartEye project",
   "scripts": {
     "dev": "cd charteye && npm run dev",
-    "build": "cd charteye && npm run build",
-    "start": "cd charteye && npm run start",
+    "build": "chmod +x build.sh && ./build.sh",
+    "start": "node simple-server.js",
     "lint": "cd charteye && npm run lint",
     "test:payment": "node testPaymentPrompt.js",
     "test:payment:ui": "bash runPaymentPromptTest.sh",

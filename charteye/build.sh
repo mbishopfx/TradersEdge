@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e  # Exit immediately if a command exits with a non-zero status
 
 echo "=== Environment Information ==="
 echo "Node version: $(node -v)"
@@ -14,6 +14,13 @@ npm install --legacy-peer-deps
 # Install tailwindcss locally
 echo "=== Installing tailwindcss locally ==="
 npm install --legacy-peer-deps tailwindcss postcss autoprefixer
+
+# Make sure next is installed and available
+echo "=== Ensuring Next.js is installed ==="
+if ! command -v next &> /dev/null; then
+  echo "Next.js CLI not found in PATH, installing..."
+  npm install --legacy-peer-deps next
+fi
 
 # Create the appropriate postcss.config.js file
 echo "=== Setting up postcss config ==="
@@ -67,13 +74,29 @@ fi
 echo "=== Setting NODE_ENV to production for build ==="
 export NODE_ENV=production
 
-# Run the Next.js build (no longer using static export)
+# Run the Next.js build
 echo "=== Running Next.js build for App Router ==="
 export NODE_OPTIONS="--max-old-space-size=4096"
+
+# Try different methods to run Next.js build
+echo "Attempting Next.js build with npx..."
 if npx --no-install next build; then
-  echo "=== Build completed successfully! ==="
+  echo "=== Build completed successfully with npx! ==="
+elif [ -f "./node_modules/.bin/next" ]; then
+  echo "Attempting build with direct path to next binary..."
+  ./node_modules/.bin/next build
+  BUILD_RESULT=$?
+  if [ $BUILD_RESULT -eq 0 ]; then
+    echo "=== Build completed successfully with direct path! ==="
+  else
+    echo "=== Build failed with exit code: $BUILD_RESULT ==="
+    exit $BUILD_RESULT
+  fi
 else
-  echo "=== Build failed, but continuing anyway ==="
+  echo "=== Build failed, next binary not found ==="
+  echo "Contents of node_modules/.bin:"
+  ls -la node_modules/.bin || echo "node_modules/.bin directory not found"
+  exit 1
 fi
 
 echo "=== Deployment completed! ==="
