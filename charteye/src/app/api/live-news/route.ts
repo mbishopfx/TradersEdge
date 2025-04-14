@@ -5,6 +5,9 @@ import OpenAI from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchMarketData, formatMarketDataForAI } from '@/lib/services/marketData';
 
+export const dynamic = 'force-static';
+export const revalidate = 900; // Revalidate every 15 minutes
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
