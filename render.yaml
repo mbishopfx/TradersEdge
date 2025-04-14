@@ -2,21 +2,21 @@ services:
   - type: web
     name: charteye
     runtime: node
+    plan: free
     rootDir: charteye
-    buildCommand: ./build.sh
-    startCommand: node server.js
+    buildCommand: npm install && NODE_ENV=production npx next build
+    startCommand: NODE_ENV=production node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: NEWS_DATA_DIR
-        value: /data/news-data
+        value: /var/data/news-data
     autoDeploy: true
-    healthCheckPath: /api/health
     disk:
       name: data
-      mountPath: /data
+      mountPath: /var/data
       sizeGB: 1
 
   - type: cron
@@ -28,4 +28,4 @@ services:
     startCommand: python3 NewsScrape.py
     envVars:
       - key: NEWS_DATA_DIR
-        value: /data/news-data 
+        value: /var/data/news-data 
