@@ -4,6 +4,9 @@ import { getChartAnalysis } from '@/lib/services/firebase';
 // Enable developer mode if needed
 const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate every hour
+
 export async function GET(
   request: Request,
   context: { params: { id: string } }
