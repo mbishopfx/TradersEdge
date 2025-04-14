@@ -2,30 +2,23 @@ services:
   - type: web
     name: charteye
     runtime: node
-    plan: free
-    rootDir: charteye
     buildCommand: ./build.sh
-    startCommand: NODE_ENV=production node server.js
+    startCommand: node simple-server.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-      - key: NEWS_DATA_DIR
-        value: /var/data/news-data
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
+    healthCheckPath: /
     autoDeploy: true
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 1
 
   - type: cron
     name: charteye-news-scraper
     runtime: python
-    rootDir: charteye
     buildCommand: pip install -r requirements.txt
     schedule: "0 */6 * * *"
-    startCommand: python3 NewsScrape.py
+    startCommand: python NewsScrape.py
     envVars:
-      - key: NEWS_DATA_DIR
-        value: /var/data/news-data 
+      - key: PYTHONUNBUFFERED
+        value: "true"
+    autoDeploy: false 

@@ -6,10 +6,10 @@ const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id;
     
     if (!id) {
       return NextResponse.json(
