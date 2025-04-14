@@ -2,15 +2,53 @@ services:
   - type: web
     name: charteye
     runtime: node
-    buildCommand: ./build.sh
-    startCommand: node server.js
+    buildCommand: npm install && npm run build
+    startCommand: ./start.sh
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NODE_OPTIONS
-        value: --max-old-space-size=4096
       - key: PORT
-        value: "10000"
+        value: 3000
+      - key: API_PORT
+        value: 3001
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SQUARE_ACCESS_TOKEN
+        sync: false
+      - key: SQUARE_LOCATION_ID
+        sync: false
+      - key: TWITTER_API_KEY
+        sync: false
+      - key: TWITTER_API_SECRET
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true
 

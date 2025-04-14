@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node simple-server.js",
+    "start": "concurrently \"node simple-server.js\" \"node api-server.js\"",
+    "start:static": "node simple-server.js",
+    "start:api": "node api-server.js",
     "lint": "next lint"
   },
   "dependencies": {
@@ -21,11 +23,14 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.18.3",
     "firebase": "^11.6.0",
     "firebase-admin": "^12.0.0",
     "framer-motion": "^12.6.3",
+    "http-proxy-middleware": "^2.0.6",
     "langchain": "^0.3.20",
     "lucide-react": "^0.487.0",
     "next": "^15.2.4",

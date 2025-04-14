@@ -99,5 +99,18 @@ else
   exit 1
 fi
 
+# Create a start script for production
+echo "=== Creating production start script ==="
+cat > start.sh << EOL
+#!/bin/bash
+# Start both the static server and API server
+echo "Starting servers..."
+export PORT=\${PORT:-3000}
+export API_PORT=\${API_PORT:-3001}
+npx concurrently "node simple-server.js" "node api-server.js"
+EOL
+
+chmod +x start.sh
+
 echo "=== Deployment completed! ==="
-echo "You can start the server with: node server.js" 
+echo "You can start the servers with: ./start.sh" 
