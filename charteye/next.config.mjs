@@ -4,7 +4,7 @@ const nextConfig = {
   // swcMinify removed for compatibility
   
   // Production build optimizations for App Router
-  output: 'standalone', // Use standalone output instead of 'export'
+  output: 'export', // Export static files instead of 'standalone'
   
   // Skip typechecking and linting during build
   typescript: {
@@ -33,6 +33,7 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    unoptimized: true, // Required for static export
   },
 };
 
