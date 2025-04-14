@@ -2,8 +2,9 @@ services:
   - type: web
     name: charteye
     runtime: node
-    buildCommand: cd charteye && npm install && npm run build
-    startCommand: cd charteye && node server.js
+    rootDir: charteye
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,9 +22,10 @@ services:
   - type: cron
     name: charteye-news-scraper
     runtime: python
-    buildCommand: cd charteye && pip install -r requirements.txt
+    rootDir: charteye
+    buildCommand: pip install -r requirements.txt
     schedule: "0 */6 * * *"
-    startCommand: cd charteye && ./start-news-scraper.sh
+    startCommand: python3 NewsScrape.py
     envVars:
       - key: NEWS_DATA_DIR
         value: /data/news-data 
