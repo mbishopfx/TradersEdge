@@ -11,32 +11,6 @@ services:
         value: 10000
       - key: NEWS_DATA_DIR
         value: /data/news-data
-      - key: NEXT_PUBLIC_FIREBASE_API_KEY
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-        sync: false
-      - key: NEXT_PUBLIC_FIREBASE_APP_ID
-        sync: false
-      - key: FIREBASE_PROJECT_ID
-        sync: false
-      - key: FIREBASE_CLIENT_EMAIL
-        sync: false
-      - key: FIREBASE_PRIVATE_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: SQUARE_ACCESS_TOKEN
-        sync: false
-      - key: SQUARE_LOCATION_ID
-        sync: false
-      - key: NEXT_PUBLIC_APP_URL
-        sync: false
     autoDeploy: true
     healthCheckPath: /api/health
     disk:
