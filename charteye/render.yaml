@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: charteye
+    runtime: node
+    buildCommand: ./build.sh
+    startCommand: node simple-server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
+    healthCheckPath: /
+    autoDeploy: true
+
+  - type: cron
+    name: charteye-news-scraper
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    schedule: "0 */6 * * *"
+    startCommand: python NewsScrape.py
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+    autoDeploy: false 
