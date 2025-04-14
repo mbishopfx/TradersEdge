@@ -2,7 +2,7 @@ services:
   - type: web
     name: charteye
     runtime: node
-    buildCommand: ./build.sh
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: node simple-server.js
     envVars:
       - key: NODE_ENV
@@ -15,9 +15,9 @@ services:
   - type: cron
     name: charteye-news-scraper
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: cd charteye && pip install -r requirements.txt
     schedule: "0 */6 * * *"
-    startCommand: python NewsScrape.py
+    startCommand: cd charteye && python NewsScrape.py
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
