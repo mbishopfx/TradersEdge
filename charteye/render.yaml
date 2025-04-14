@@ -3,13 +3,15 @@ services:
     name: charteye
     runtime: node
     buildCommand: ./build.sh
-    startCommand: node simple-server.js
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
         value: --max-old-space-size=4096
-    healthCheckPath: /
+      - key: PORT
+        value: "10000"
+    healthCheckPath: /api/health
     autoDeploy: true
 
   - type: cron
