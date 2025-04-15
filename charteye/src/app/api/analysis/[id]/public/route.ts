@@ -8,10 +8,17 @@ const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 export const dynamic = 'force-static';
 export const revalidate = 3600; // Revalidate every hour
 
-// IMPORTANT: Move the generateStaticParams function to the layout.tsx file
-// DO NOT keep it here as it conflicts with the 'use client' directive
-// This function is kept here only for reference but is ignored at build time
-// export async function generateStaticParams() { ... }
+// Add generateStaticParams directly in the route file as well
+export async function generateStaticParams() {
+  return [
+    { id: 'placeholder' },
+    { id: 'static-placeholder-1' },
+    { id: 'static-placeholder-2' }
+  ];
+}
+
+// IMPORTANT: We're keeping the generateStaticParams in both files
+// to ensure compatibility with static export
 
 export async function GET(
   request: Request,
