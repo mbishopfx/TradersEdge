@@ -244,13 +244,30 @@ export async function getSharedAnalyses(analysisId: string): Promise<SharedAnaly
 // Get all public analysis IDs for static generation
 export async function getAllPublicAnalysisIds(): Promise<string[]> {
   return handleFirestoreOperation(async () => {
-    const q = query(
-      collection(db, 'chartAnalyses'),
-      where('isPublic', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(100) // Limit to 100 most recent public analyses
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.id);
-  }, [] as string[]);
+    try {
+      console.log('Fetching public analysis IDs from Firestore');
+      // Query for public analyses, ordered by creation date
+      const q = query(
+        collection(db, 'chartAnalyses'),
+        where('isPublic', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(20) // Limit to avoid too many static pages
+      );
+      
+      const querySnapshot = await getDocs(q);
+      console.log(`Found ${querySnapshot.size} public analyses`);
+      
+      return querySnapshot.docs.map(doc => doc.id);
+    } catch (error: any) {
+      console.error('Error in getAllPublicAnalysisIds:', error);
+      // If index error, provide helpful message
+      if (error.code === 'failed-precondition' && error.message?.includes('index')) {
+        console.warn('This query requires a Firestore index. Please create it at:', 
+          'https://console.firebase.google.com/project/charteye-5be44/firestore/indexes');
+      }
+      
+      // Return empty array to continue the build process
+      return [];
+    }
+  }, [] as string[]); // Empty array as fallback
 } 

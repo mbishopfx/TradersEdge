@@ -8,21 +8,10 @@ const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 export const dynamic = 'force-static';
 export const revalidate = 3600; // Revalidate every hour
 
-// Generate static params for the [id] route
-export async function generateStaticParams() {
-  try {
-    // Try to get all public analysis IDs from Firestore
-    if (typeof getAllPublicAnalysisIds === 'function') {
-      const ids = await getAllPublicAnalysisIds();
-      return ids.map(id => ({ id }));
-    }
-  } catch (error) {
-    console.error('Error getting public analysis IDs:', error);
-  }
-  
-  // Fallback to placeholder 
-  return [{ id: 'placeholder' }];
-}
+// IMPORTANT: Move the generateStaticParams function to the layout.tsx file
+// DO NOT keep it here as it conflicts with the 'use client' directive
+// This function is kept here only for reference but is ignored at build time
+// export async function generateStaticParams() { ... }
 
 export async function GET(
   request: Request,

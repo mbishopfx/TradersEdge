@@ -25,6 +25,14 @@ const nextConfig = {
   // Enable trailingSlash for static export compatibility
   trailingSlash: true,
   
+  // Enable basePath if deploying to a subdirectory
+  // basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  
+  // Configure static fallbacks
+  generateBuildId: async () => {
+    return 'charteye-build-' + Date.now();
+  },
+  
   images: {
     remotePatterns: [
       {
