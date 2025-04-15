@@ -223,10 +223,10 @@ if (fs.existsSync(publicDir)) {
         console.log(`Copied: ${file}`);
       }
     });
-  } catch (error) {
+} catch (error) {
     console.error('Error copying public files:', error);
   }
-}
+} 
 
 console.log('Fallback build completed successfully.');
 process.exit(0); 

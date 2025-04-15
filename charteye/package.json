@@ -20,9 +20,6 @@
     "@langchain/core": "^0.3.43",
     "@langchain/openai": "^0.5.4",
     "@langchain/textsplitters": "^0.1.0",
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.3.20",
-    "@types/react-dom": "^18.3.6",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
@@ -46,13 +43,16 @@
     "react-syntax-highlighter": "^15.6.1",
     "square": "^42.0.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.3.3",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.3.20",
+    "@types/react-dom": "^18.3.6",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",
-    "firebase-tools": "^14.1.0"
+    "firebase-tools": "^14.1.0",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"

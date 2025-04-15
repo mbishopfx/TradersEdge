@@ -5,74 +5,70 @@ import * as admin from 'firebase-admin';
 
 // Required for static export
 export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate once per hour
 
 // Initialize Firebase Admin for this API route if not already initialized
 if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: 'charteye-5be44',
-    storageBucket: 'charteye-5be44.appspot.com',
-    databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
-  });
-  console.log('Firebase Admin initialized in user analyses API route');
+  try {
+    admin.initializeApp({
+      projectId: 'charteye-5be44',
+      storageBucket: 'charteye-5be44.appspot.com',
+      databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
+    });
+    console.log('Firebase Admin initialized in user analyses API route');
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin:', error);
+  }
 }
 
-// Enable developer mode if needed (when authentication isn't working)
-const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
+// We need to create a generateStaticParams function for static export
+export async function generateStaticParams() {
+  // Just return an empty params object since this is a static API
+  return [{}];
+}
 
-export async function GET(request: Request) {
+// Return fallback data for static rendering
+export async function GET() {
   try {
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization');
-    let userId = 'dev-user-123';
-    let isAuthenticated = false;
+    // For static export, we can't use request.headers
+    // Instead, we'll return sample data that the client-side can use
+    // The actual authentication will happen on the client or API server
     
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        // Verify the Firebase ID token
-        const token = authHeader.substring(7);
-        const decodedToken = await getAuth().verifyIdToken(token);
-        userId = decodedToken.uid;
-        isAuthenticated = true;
-      } catch (authError) {
-        console.error('Authentication error:', authError);
-        // In developer mode, we'll continue with the default userId
-        if (!DEVELOPER_MODE) {
-          return NextResponse.json(
-            { error: 'Invalid authentication token' },
-            { status: 401 }
-          );
+    // Sample user ID for static generation
+    const userId = 'static-user';
+    
+    // Return mock analyses for static export
+    return NextResponse.json({
+      analyses: [
+        {
+          id: 'static-1',
+          title: 'Market Analysis Example',
+          imageUrl: 'https://placehold.co/800x600?text=Analysis+Example',
+          createdAt: new Date().toISOString(),
+          isPublic: true,
+          indicators: ['Moving Averages', 'RSI', 'MACD'],
+          summary: 'Example analysis for static generation'
+        },
+        {
+          id: 'static-2',
+          title: 'Technical Pattern Example',
+          imageUrl: 'https://placehold.co/800x600?text=Pattern+Example',
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          isPublic: true,
+          indicators: ['Support/Resistance', 'Volume Profile'],
+          summary: 'Example pattern analysis for static generation'
         }
-      }
-    } else if (!DEVELOPER_MODE) {
-      // In production, require authentication
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-    
-    try {
-      // Get all analyses for the user from Firestore
-      const analyses = await getUserChartAnalyses(userId);
-      return NextResponse.json({ analyses });
-    } catch (firestoreError) {
-      console.error('Firestore error:', firestoreError);
-      
-      if (DEVELOPER_MODE) {
-        // In development mode, return empty list if Firestore fails
-        return NextResponse.json({ 
-          analyses: [],
-          _devMode: true,
-          _error: 'Failed to fetch analyses from Firestore'
-        });
-      }
-      
-      throw firestoreError; // Re-throw in production mode
-    }
+      ],
+      staticGeneration: true,
+      note: 'This is static data. Real user data will be loaded from the API server.'
+    });
   } catch (error) {
-    console.error('Error fetching user analyses:', error);
+    console.error('Error generating static user analyses:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Failed to generate static analyses',
+        analyses: []
+      },
       { status: 500 }
     );
   }

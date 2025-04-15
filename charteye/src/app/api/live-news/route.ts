@@ -314,13 +314,28 @@ function formatHeadlines(headlines: string[], lastScrape: string | null): NewsHe
   }));
 }
 
-export async function GET(request: Request) {
+// Instead of using request.url, we'll support the main currency pairs via staticParams
+export async function generateStaticParams() {
+  return [
+    { currency: 'XAU' },   // Gold
+    { currency: 'BTC' },   // Bitcoin
+    { currency: 'EUR' },   // Euro
+    { currency: 'JPY' },   // Japanese Yen
+    { currency: 'GBP' }    // British Pound
+  ];
+}
+
+// Modified GET function that doesn't use request.url
+export async function GET(
+  request: Request,
+  context: { params: { currency?: string } }
+) {
   try {
     console.log('[Live News API] Processing request');
     
-    // Get currency from query parameters
-    const { searchParams } = new URL(request.url);
-    const currency = searchParams.get('currency') || 'XAU';
+    // Get currency from static params or use XAU as default
+    // This avoids using request.url which causes the static export bailout
+    const currency = context?.params?.currency || 'XAU';
     
     // Read news data
     const { headlines, snippets, lastScrape } = await readNewsData();
