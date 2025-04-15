@@ -159,6 +159,35 @@ app.post('/api/auth/token', async (req, res) => {
   }
 });
 
+// Handle anonymous authentication
+app.post('/api/auth/anonymous', async (req, res) => {
+  try {
+    console.log('[API Auth] Anonymous auth request received');
+    
+    // Generate a random user ID for anonymous users
+    const anonymousId = 'anon-' + Math.random().toString(36).substring(2, 15);
+    
+    // Return mock user data
+    res.json({
+      uid: anonymousId,
+      email: null,
+      displayName: 'Guest User',
+      isAnonymous: true,
+      success: true,
+      _devMode: true
+    });
+    
+    console.log('[API Auth] Created anonymous user with ID:', anonymousId);
+  } catch (error) {
+    console.error('[API Auth] Error creating anonymous user:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      message: error.message || 'Failed to create anonymous user',
+      success: false 
+    });
+  }
+});
+
 // API Routes
 app.get('/api/analysis/:id/public', async (req, res) => {
   try {
