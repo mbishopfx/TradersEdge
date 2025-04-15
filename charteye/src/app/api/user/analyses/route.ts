@@ -3,6 +3,9 @@ import { getUserChartAnalyses } from '@/lib/services/firebase';
 import { getAuth } from 'firebase-admin/auth';
 import * as admin from 'firebase-admin';
 
+// Required for static export
+export const dynamic = 'force-static';
+
 // Initialize Firebase Admin for this API route if not already initialized
 if (!admin.apps.length) {
   admin.initializeApp({

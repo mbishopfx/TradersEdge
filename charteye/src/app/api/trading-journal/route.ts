@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { analyzeTradingJournal } from '@/lib/services/openai';
 
+// Required for static export
+export const dynamic = 'force-static';
+
 export async function POST(request: Request) {
   try {
     const { entries } = await request.json();

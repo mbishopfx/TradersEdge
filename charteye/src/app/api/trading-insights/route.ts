@@ -51,6 +51,8 @@ Remember that all trading involves risk, and you should always emphasize proper 
 // Enable developer mode if needed
 const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 
+export const dynamic = 'force-static';
+
 export async function POST(request: Request) {
   try {
     const { message, userId } = await request.json();
