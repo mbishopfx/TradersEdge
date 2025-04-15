@@ -22,6 +22,9 @@ const nextConfig = {
   // Disable source maps in production to improve build times
   productionBrowserSourceMaps: false,
   
+  // Enable trailingSlash for static export compatibility
+  trailingSlash: true,
+  
   images: {
     remotePatterns: [
       {

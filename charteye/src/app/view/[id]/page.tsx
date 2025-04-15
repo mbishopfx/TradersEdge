@@ -191,15 +191,7 @@ function ViewSharedAnalysisClient({ params }: { params: { id: string } }) {
   );
 }
 
-// Server Component Wrapper
+// Client Component export
 export default function ViewSharedAnalysis({ params }: { params: { id: string } }) {
   return <ViewSharedAnalysisClient params={params} />;
-}
-
-// This function is required for static site generation with dynamic routes
-export async function generateStaticParams() {
-  // Since we don't know all possible IDs at build time,
-  // we'll return an empty array and handle missing routes at runtime
-  // or we could fetch some popular/featured analyses to pre-generate
-  return [];
 } 

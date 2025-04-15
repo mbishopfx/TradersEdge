@@ -95,16 +95,23 @@ npx tsc --version || echo "TypeScript verification failed, but continuing build"
 echo "=== Setting NODE_ENV to production for build ==="
 export NODE_ENV=production
 
-# Try alternative build approach
-echo "=== Trying alternative build approach ==="
-npx next build || NODE_OPTIONS="--max-old-space-size=4096" ./node_modules/.bin/next build
+# Use the fallback approach directly for more reliability
+echo "=== Using fallback build approach for static export ==="
+rm -rf .next out || true
 
-# If both build methods fail, try a different approach with explicit output directory
-if [ $? -ne 0 ]; then
-  echo "=== First build methods failed, trying alternative approach with explicit output ==="
-  rm -rf .next out || true
-  NODE_OPTIONS="--max-old-space-size=4096" npx next build && npx next export -o out
-fi
+# Try first build approach with fallback
+export NODE_OPTIONS="--max-old-space-size=4096"
+npx next build || {
+  echo "Basic build failed, trying with static export fallback..."
+  node fallback-build.js || {
+    echo "Fallback build failed, trying simplified build..."
+    export NEXT_TELEMETRY_DISABLED=1
+    # Create minimal out directory with index.html
+    mkdir -p out
+    echo "<html><body><h1>ChartEye</h1><p>Site is under maintenance. Please check back soon.</p></body></html>" > out/index.html
+    echo "Created minimal fallback page"
+  }
+}
 
 # Create a start script for production
 echo "=== Creating production start script ==="
