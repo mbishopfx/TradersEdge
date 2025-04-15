@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getChartAnalysis } from '@/lib/services/firebase';
+import { getChartAnalysis, getAllPublicAnalysisIds } from '@/lib/services/firebase';
 
 // Enable developer mode if needed
 const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
@@ -10,9 +10,22 @@ export const revalidate = 3600; // Revalidate every hour
 
 // This is required for static export with dynamic routes
 export async function generateStaticParams() {
-  // Return an empty array since we don't know the IDs at build time
-  // The pages will be generated on-demand
-  return [];
+  try {
+    // Get all public analysis IDs from Firestore
+    const ids = await getAllPublicAnalysisIds();
+    
+    // Return an array of objects with the id parameter
+    return ids.map((id: string) => ({
+      id: id.toString()
+    }));
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    // Return a minimal set of IDs for fallback
+    return [
+      { id: 'fallback-1' },
+      { id: 'fallback-2' }
+    ];
+  }
 }
 
 export async function GET(

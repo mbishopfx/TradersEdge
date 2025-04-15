@@ -239,4 +239,18 @@ export async function getSharedAnalyses(analysisId: string): Promise<SharedAnaly
   );
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SharedAnalysis));
+}
+
+// Get all public analysis IDs for static generation
+export async function getAllPublicAnalysisIds(): Promise<string[]> {
+  return handleFirestoreOperation(async () => {
+    const q = query(
+      collection(db, 'chartAnalyses'),
+      where('isPublic', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(100) // Limit to 100 most recent public analyses
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => doc.id);
+  }, [] as string[]);
 } 
