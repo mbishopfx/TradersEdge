@@ -7,6 +7,27 @@ const app = express();
 let port = process.env.API_PORT || 3001;
 const MAX_PORT = port + 10; // Try up to 10 ports if needed
 
+// Debug and fallback settings
+const DEBUG_MODE = process.env.API_DEBUG === 'true';
+const USE_FALLBACK = process.env.USE_FALLBACK === 'true';
+
+if (DEBUG_MODE) {
+  console.log('[API Server] Debug mode enabled');
+  console.log('[API Server] Environment variables:');
+  Object.keys(process.env).filter(key => 
+    !key.includes('SECRET') && 
+    !key.includes('KEY') && 
+    !key.includes('TOKEN') && 
+    !key.includes('PASSWORD')
+  ).forEach(key => {
+    console.log(`  ${key}: ${process.env[key]}`);
+  });
+}
+
+if (USE_FALLBACK) {
+  console.log('[API Server] Fallback mode enabled - will use mock data when needed');
+}
+
 // Enhanced logging for Render deployment
 console.log(`[API Server] Starting in ${process.env.NODE_ENV || 'development'} mode`);
 console.log(`[API Server] Running on port ${port}`);
@@ -129,21 +150,46 @@ try {
 
 // Mock data for development or when Firebase is unavailable
 const getMockAnalysis = (id) => {
+  console.log(`[API Mock] Generating mock analysis for ID: ${id}`);
   return {
-    id,
+    id: id || `mock-${Date.now()}`,
     imageUrl: 'https://placehold.co/800x600?text=Chart+Example',
-    analysis: 'This is a fallback chart analysis used for static exports. In production with Firebase, this would show the actual analysis stored in Firestore.',
+    analysis: 'This is a fallback chart analysis used when Firebase is unavailable. The system is currently using mock data to demonstrate functionality.',
     grading: {
       patternClarity: 7.5,
-      trendAlignment: 7.5,
-      riskReward: 7.5,
-      volumeConfirmation: 7.5,
-      keyLevelProximity: 7.5,
+      trendAlignment: 8.0,
+      riskReward: 7.0,
+      volumeConfirmation: 6.5,
+      keyLevelProximity: 8.5,
       overallGrade: 7.5
     },
-    createdAt: new Date().toISOString()
+    indicators: [
+      { name: 'RSI', value: '65', interpretation: 'Slightly overbought' },
+      { name: 'MACD', value: 'Positive', interpretation: 'Bullish momentum' },
+      { name: 'Moving Averages', value: 'Above 200 SMA', interpretation: 'Long-term uptrend' }
+    ],
+    patternDetected: 'Potential double top',
+    supportLevels: [1.2340, 1.2280, 1.2200],
+    resistanceLevels: [1.2450, 1.2500, 1.2580],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    _isMock: true
   };
 };
+
+// Enhanced fallback for API requests
+app.use('/api/analysis/:id', (req, res, next) => {
+  console.log(`[API Route] Analysis request for ID: ${req.params.id}`);
+  
+  // If Firebase is available, continue to the next middleware
+  if (firebaseAdmin && getChartAnalysis) {
+    return next();
+  }
+  
+  // Otherwise, serve mock data
+  console.log('[API Route] Firebase unavailable, using mock data');
+  res.json(getMockAnalysis(req.params.id));
+});
 
 // Handle authentication
 app.post('/api/auth/token', async (req, res) => {
@@ -686,13 +732,126 @@ app.get('/api/trading-journal', (req, res) => {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  console.log('API server will continue running');
+  console.error('[API Server] Uncaught Exception:', error);
+  console.log('[API Server] Server will continue running despite error');
+  
+  // Log stack trace for better debugging
+  if (error.stack) {
+    console.error('[API Server] Stack trace:', error.stack);
+  }
 });
 
-// Look for startServer function and replace with an improved version
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[API Server] Unhandled Promise Rejection:', reason);
+  console.log('[API Server] Server will continue running despite rejection');
+});
+
+// Function to handle API server startup
 const startServer = () => {
-  // Create server with resilient error handling
+  // Add fallback routes for common API endpoints
+  app.get('/api/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      mode: process.env.NODE_ENV || 'development',
+      version: '1.0.0'
+    });
+  });
+  
+  // Fallback for live news API
+  app.get('/api/live-news', (req, res) => {
+    console.log('[API Server] Fallback live-news request received');
+    const currency = req.query.currency || 'XAU';
+    
+    // Create mock analyses
+    const analyses = [
+      {
+        id: `news-summary-${Date.now()}`,
+        category: 'summary',
+        title: `${currency} Market Summary`,
+        content: `${currency} has been showing mixed signals in recent trading sessions. Market participants are closely watching economic indicators and central bank communications for direction.`,
+        timestamp: new Date().toISOString(),
+        currency
+      },
+      {
+        id: `market-impact-${Date.now()}`,
+        category: 'market-impact',
+        title: `${currency} Market Impact Analysis`,
+        content: `Recent economic data has had a moderate impact on ${currency}. Inflation numbers and employment reports continue to be key drivers for price action.`,
+        timestamp: new Date().toISOString(),
+        currency
+      },
+      {
+        id: `sector-analysis-${Date.now()}`,
+        category: 'sector-analysis',
+        title: `${currency} Sector Analysis`,
+        content: `The ${currency} sector is showing resilience despite broader market volatility. Institutional flows suggest continued interest in this asset class.`,
+        timestamp: new Date().toISOString(),
+        currency
+      },
+      {
+        id: `trend-prediction-${Date.now()}`,
+        category: 'trend-prediction',
+        title: `${currency} Trend Prediction`,
+        content: `Technical indicators suggest ${currency} may continue its current trajectory in the short term. Watch key support and resistance levels for potential breakouts.`,
+        timestamp: new Date().toISOString(),
+        currency
+      }
+    ];
+    
+    // Calculate next update time (15 minutes from now)
+    const nextUpdateTime = new Date();
+    nextUpdateTime.setMinutes(nextUpdateTime.getMinutes() + 15);
+    
+    res.json({
+      analyses,
+      nextUpdateTime: nextUpdateTime.toISOString(),
+      currency,
+      source: 'fallback',
+      _isMock: true
+    });
+  });
+  
+  // Fallback for user analyses
+  app.get('/api/user/analyses', (req, res) => {
+    console.log('[API Server] Fallback user analyses request received');
+    
+    // Create mock analyses list
+    const analyses = Array.from({ length: 5 }, (_, i) => ({
+      id: `mock-analysis-${i+1}`,
+      title: `Sample Analysis ${i+1}`,
+      summary: `This is a sample analysis for demonstration purposes.`,
+      imageUrl: `https://placehold.co/800x600?text=Chart+${i+1}`,
+      createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
+      isPublic: i % 2 === 0,
+      tags: ['sample', 'mock', i % 2 === 0 ? 'bullish' : 'bearish'],
+      _isMock: true
+    }));
+    
+    res.json({
+      analyses,
+      totalCount: analyses.length,
+      hasMore: false,
+      _isMock: true
+    });
+  });
+  
+  // Default route for API routes that don't exist
+  app.use('/api/*', (req, res) => {
+    console.log(`[API Server] Fallback for unknown route: ${req.originalUrl}`);
+    res.json({
+      success: true,
+      message: 'API endpoint accessed in fallback mode',
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
+      _isMock: true
+    });
+  });
+  
+  // Attempt to start the server on the specified port
   const server = app.listen(port, () => {
     console.log(`✅ API server running at http://localhost:${port}/`);
     console.log(`${new Date().toISOString()} - API Server started successfully`);

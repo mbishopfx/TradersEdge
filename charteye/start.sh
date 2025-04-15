@@ -111,10 +111,54 @@ echo "=== System Information ==="
 echo "Node version: $(node -v)"
 echo "NPM version: $(npm -v)"
 echo "Current directory: $(pwd)"
-echo "Directory contents of out/: $(ls -la out/)"
+echo "Directory contents of out/: $(ls -la out/ 2>/dev/null || echo 'out/ directory not found')"
 echo "==========================="
 
-# Start the servers - start API server first
+# Copy sample data files to news-data directory if they don't exist
+echo "Ensuring sample news data files exist..."
+if [ ! -f news-data/news_1.json ]; then
+  echo "Creating sample news files..."
+  
+  # Create first sample news file
+  cat > news-data/news_1.json << EOL
+{
+  "date": "$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")",
+  "headlines": [
+    "Sample headline created during server startup 1",
+    "Markets show positive trends in recent session 1",
+    "Technical indicators suggest potential breakout 1"
+  ],
+  "snippets": [
+    "Market sentiment improved as economic data exceeded expectations.",
+    "Trading volumes increased, suggesting strong institutional participation."
+  ],
+  "source": "startup-sample-1"
+}
+EOL
+
+  # Create second sample news file  
+  cat > news-data/news_2.json << EOL
+{
+  "date": "$(date -u -d "-1 day" +"%Y-%m-%dT%H:%M:%S.000Z")",
+  "headlines": [
+    "Sample headline created during server startup 2",
+    "Analysts predict market volatility to continue 2",
+    "Economic indicators point to stable growth 2"
+  ],
+  "snippets": [
+    "Analysts recommend watching key support and resistance levels.",
+    "Central bank communications continue to influence market direction."
+  ],
+  "source": "startup-sample-2"
+}
+EOL
+  echo "Sample news files created"
+fi
+
+# Start the servers - start API server first, with more diagnostics
+echo "Starting API server with diagnostics..."
+export API_DEBUG=true
+export USE_FALLBACK=true
 start_api_server
 start_static_server
 

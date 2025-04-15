@@ -89,6 +89,42 @@ EOL
   echo "Sample metadata.json created"
 fi
 
+# Create sample news files
+for i in {1..3}; do
+  if [ ! -f news-data/news_$i.json ]; then
+    echo "Creating sample news_$i.json file"
+    cat > news-data/news_$i.json << EOL
+{
+  "date": "$(date -u -d "-$i day" +"%Y-%m-%dT%H:%M:%S.000Z")",
+  "headlines": [
+    "Sample headline for testing purposes $i-1",
+    "Markets show volatility in latest session $i-2",
+    "Gold rebounds after recent decline $i-3",
+    "USD strengthens against major currencies $i-4",
+    "Technical analysis suggests potential reversal $i-5"
+  ],
+  "snippets": [
+    "Market volatility increased today as traders reacted to new economic data.",
+    "Analysts suggest watching key technical levels for confirmation of trend.",
+    "Trading volumes were above average, indicating strong participation."
+  ],
+  "source": "sample-data-$i"
+}
+EOL
+    echo "Sample news_$i.json created"
+  fi
+done
+
+# Create public directory for static assets if it doesn't exist
+mkdir -p public
+
+# Create a sample favicon if it doesn't exist
+if [ ! -f public/favicon.ico ]; then
+  echo "Creating placeholder favicon.ico"
+  # Create a small empty file as a placeholder
+  touch public/favicon.ico
+fi
+
 if [ ! -f src/contexts/AuthContext.tsx ]; then
   echo "Creating placeholder AuthContext.tsx"
   echo "import React, { createContext, useContext, useState, useEffect } from 'react';

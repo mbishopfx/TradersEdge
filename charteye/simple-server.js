@@ -104,13 +104,101 @@ const handleApiFallback = (req, res, reason) => {
     });
   }
   
+  // Handle live news requests
+  if (req.path === '/api/live-news') {
+    const currency = req.query.currency || 'XAU';
+    console.log(`[API Fallback] Live news request for ${currency}`);
+    
+    return res.json({
+      analyses: [
+        {
+          id: `news-summary-${Date.now()}`,
+          category: 'summary',
+          title: `${currency} Market Summary`,
+          content: `${currency} markets are experiencing normal volatility. This is fallback data from the static server.`,
+          timestamp: new Date().toISOString(),
+          currency
+        },
+        {
+          id: `market-impact-${Date.now()}`,
+          category: 'market-impact',
+          title: `${currency} Market Impact Analysis`,
+          content: `Economic indicators suggest moderate impact on ${currency}. This is fallback data.`,
+          timestamp: new Date().toISOString(),
+          currency
+        },
+        {
+          id: `sector-analysis-${Date.now()}`,
+          category: 'sector-analysis',
+          title: `${currency} Sector Analysis`,
+          content: `The ${currency} sector shows resilience in current market conditions. This is fallback data.`,
+          timestamp: new Date().toISOString(),
+          currency
+        },
+        {
+          id: `trend-prediction-${Date.now()}`,
+          category: 'trend-prediction',
+          title: `${currency} Trend Prediction`,
+          content: `Technical analysis suggests ${currency} may continue its current pattern. This is fallback data.`,
+          timestamp: new Date().toISOString(),
+          currency
+        }
+      ],
+      nextUpdateTime: new Date(Date.now() + 15 * 60000).toISOString(),
+      currency,
+      _fallback: true
+    });
+  }
+  
+  // Handle user analyses requests
+  if (req.path === '/api/user/analyses') {
+    return res.json({
+      analyses: Array.from({ length: 3 }, (_, i) => ({
+        id: `fallback-analysis-${i+1}`,
+        title: `Fallback Analysis ${i+1}`,
+        summary: 'This is fallback analysis data from the static server.',
+        imageUrl: `https://placehold.co/800x600?text=Fallback+Chart+${i+1}`,
+        createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+        updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
+        isPublic: true,
+        _fallback: true
+      })),
+      totalCount: 3,
+      hasMore: false,
+      _fallback: true
+    });
+  }
+  
+  // Handle analysis requests
+  if (req.path.startsWith('/api/analysis/')) {
+    const id = req.path.split('/').pop();
+    return res.json({
+      id: id || 'fallback-id',
+      title: 'Fallback Chart Analysis',
+      imageUrl: 'https://placehold.co/800x600?text=Fallback+Chart',
+      analysis: 'This is fallback analysis text provided by the static server when the API server is unavailable.',
+      grading: {
+        patternClarity: 7.0,
+        trendAlignment: 7.5,
+        riskReward: 8.0,
+        volumeConfirmation: 6.5,
+        keyLevelProximity: 7.5,
+        overallGrade: 7.3
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _fallback: true
+    });
+  }
+  
   // General fallback for API routes
   res.json({
     success: true,
     fallback: true,
     message: 'API fallback response',
     path: req.path,
-    note: 'The API server is unavailable. Using static fallback data.'
+    note: 'The API server is unavailable. Using static fallback data.',
+    timestamp: new Date().toISOString()
   });
 };
 
@@ -184,12 +272,47 @@ app.use('/api', (req, res, next) => {
     return next();
   }
   
-  // On Render, we want to be more lenient with API checks since both servers are on the same instance
+  // On Render, we want to be more lenient with API checks but still provide fallbacks if needed
   if (process.env.RENDER) {
-    console.log(`[API Check] Running on Render, skipping health check for ${req.path}`);
-    return next(); // Skip health check on Render and forward request directly
+    console.log(`[API Check] Running on Render for ${req.path}`);
+    
+    // Use a quick timeout to avoid slowing down the response
+    const timeoutMs = 1000; // Just 1 second timeout on Render
+    
+    // Use node-fetch with proper timeout handling
+    const fetchOptions = { 
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    };
+    
+    // Create a timeout promise with increased timeout for Render
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Health check timeout')), timeoutMs);
+    });
+    
+    // Race the fetch against the timeout
+    Promise.race([
+      fetch(`${API_URL}/api/health`, fetchOptions),
+      timeoutPromise
+    ])
+    .then(response => {
+      if (response.ok) {
+        console.log('[API Check] API server is available on Render');
+        next(); // Proceed to the proxy
+      } else {
+        console.warn(`[API Check] API server returned status ${response.status} on Render`);
+        handleApiFallback(req, res, `API Health check failed with status ${response.status}`);
+      }
+    })
+    .catch(error => {
+      console.error('[API Check] Quick timeout for API on Render:', error.message);
+      handleApiFallback(req, res, `Quick connection error: ${error.message}`);
+    });
+    
+    return;
   }
   
+  // For non-Render environments, use the original logic with a longer timeout
   // Try to connect to the API server's health endpoint
   const apiCheckUrl = `${API_URL}/api/health`;
   console.log(`[API Check] Checking API availability at ${apiCheckUrl}`);
