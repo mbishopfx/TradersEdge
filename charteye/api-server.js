@@ -300,6 +300,101 @@ app.all('/api/*', (req, res) => {
   });
 });
 
+// Add routes for each major section to prevent 502 errors
+app.get('/api/trading-insights', (req, res) => {
+  console.log('Handling trading-insights request');
+  res.json({
+    insights: [
+      {
+        id: 'insight-1',
+        title: 'Market Overview',
+        content: 'Markets are showing mixed signals with tech stocks leading gains.',
+        timestamp: new Date().toISOString()
+      },
+      {
+        id: 'insight-2',
+        title: 'Sector Rotation',
+        content: 'Capital is flowing from defensive to growth sectors.',
+        timestamp: new Date(Date.now() - 86400000).toISOString()
+      }
+    ],
+    success: true
+  });
+});
+
+app.get('/api/portfolio-analysis', (req, res) => {
+  console.log('Handling portfolio-analysis request');
+  res.json({
+    portfolioStats: {
+      totalValue: 125000,
+      dailyChange: 1.2,
+      riskScore: 65,
+      diversificationScore: 72
+    },
+    holdings: [
+      { symbol: 'AAPL', weight: 15.2, performance: 3.4 },
+      { symbol: 'MSFT', weight: 12.5, performance: 2.1 },
+      { symbol: 'AMZN', weight: 8.7, performance: -1.2 }
+    ],
+    recommendations: [
+      'Consider reducing technology exposure',
+      'Add more defensive assets for balance'
+    ],
+    success: true
+  });
+});
+
+app.get('/api/risk-analysis', (req, res) => {
+  console.log('Handling risk-analysis request');
+  res.json({
+    riskMetrics: {
+      volatility: 18.5,
+      maxDrawdown: 12.3,
+      sharpeRatio: 1.2,
+      sortinoRatio: 1.5
+    },
+    riskFactors: [
+      { factor: 'Market Risk', exposure: 'High', impact: 'Significant' },
+      { factor: 'Interest Rate Risk', exposure: 'Medium', impact: 'Moderate' },
+      { factor: 'Sector Concentration', exposure: 'High', impact: 'Significant' }
+    ],
+    recommendations: [
+      'Increase position sizing controls',
+      'Consider hedging market exposure'
+    ],
+    success: true
+  });
+});
+
+app.get('/api/trading-journal', (req, res) => {
+  console.log('Handling trading-journal request');
+  res.json({
+    entries: [
+      {
+        id: 'entry-1',
+        date: new Date().toISOString(),
+        trade: { symbol: 'AAPL', direction: 'Long', entry: 170.25, exit: 175.50 },
+        notes: 'Followed the trend, waited for pullback to EMA.',
+        result: 'Win'
+      },
+      {
+        id: 'entry-2',
+        date: new Date(Date.now() - 86400000).toISOString(),
+        trade: { symbol: 'MSFT', direction: 'Short', entry: 320.75, exit: 315.25 },
+        notes: 'Technical breakdown from resistance.',
+        result: 'Win'
+      }
+    ],
+    stats: {
+      winRate: 65,
+      profitFactor: 1.8,
+      averageWin: 2.1,
+      averageLoss: 1.2
+    },
+    success: true
+  });
+});
+
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);

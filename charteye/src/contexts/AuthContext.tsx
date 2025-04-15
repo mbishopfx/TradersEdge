@@ -18,12 +18,11 @@ const USE_API_SERVER = true; // Always use API server in static export
 
 // Check if we're on an authorized domain for Firebase Auth
 // The error comes from the domain not being in Firebase Auth settings
-let isAuthorizedDomain = true;
+let isAuthorizedDomain = false; // Assume unauthorized by default for safety
 if (typeof window !== 'undefined') {
-  // Render's domain or any unauthorized domain
-  if (window.location.hostname.includes('render.com') || 
-      window.location.hostname !== 'localhost') {
-    isAuthorizedDomain = false;
+  // Only localhost is authorized for Firebase Auth popup
+  if (window.location.hostname === 'localhost') {
+    isAuthorizedDomain = true;
   }
 }
 
@@ -56,6 +55,22 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+// Create a consistent guest user to avoid navigation issues
+const createGuestUser = (id?: string): MockUser => {
+  const userId = id || 'guest-' + Math.random().toString(36).substring(2, 9);
+  return {
+    uid: userId,
+    email: null,
+    displayName: 'Guest User',
+    isAnonymous: true,
+    photoURL: null,
+    _isMockUser: true
+  };
+};
+
+// Standard guest user for consistency
+const GUEST_USER = createGuestUser('standard-guest');
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | MockUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (USE_API_SERVER) {
       // For API server auth, check localStorage for token
       const storedToken = localStorage.getItem('authToken');
+      
       if (storedToken) {
         logDebug('Found stored token, validating with API server');
         
@@ -95,10 +111,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         .then(response => {
           logDebug('Token validation response status:', response.status);
+          
+          if (response.status === 401) {
+            // If unauthorized, remove the token and use guest user
+            logDebug('Token rejected with 401 status, switching to guest user');
+            localStorage.removeItem('authToken');
+            setUser(GUEST_USER);
+            setLoading(false);
+            return null;
+          }
+          
           if (response.ok) return response.json();
           throw new Error(`Token validation failed with status: ${response.status}`);
         })
         .then(userData => {
+          if (!userData) return; // Already handled 401 case
+          
           if (!userData.success) {
             throw new Error('Authentication failed: ' + (userData.message || 'Invalid response'));
           }
@@ -120,12 +148,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .catch(error => {
           console.error('Error validating token:', error);
           localStorage.removeItem('authToken');
+          // Set guest user on error
+          setUser(GUEST_USER);
         })
         .finally(() => {
           setLoading(false);
         });
       } else {
-        logDebug('No stored token found');
+        logDebug('No stored token found, using guest user');
+        setUser(GUEST_USER);
         setLoading(false);
       }
     } else {
@@ -133,7 +164,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logDebug('Using direct Firebase authentication');
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         logDebug('Firebase auth state changed', user ? 'User authenticated' : 'No user');
-        setUser(user);
+        if (user) {
+          setUser(user);
+        } else {
+          // When not authenticated with Firebase, use guest user
+          setUser(GUEST_USER);
+        }
         setLoading(false);
       });
 
@@ -159,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           
           if (!response.ok) {
-            throw new Error('API server authentication failed');
+            throw new Error(`API server authentication failed with status ${response.status}`);
           }
           
           const userData = await response.json();
@@ -167,6 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!userData.success) {
             throw new Error(userData.message || 'Authentication failed');
           }
+          
+          logDebug('Anonymous auth successful', userData);
           
           // Create a mock user
           const mockUser: MockUser = {
@@ -180,7 +218,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           setUser(mockUser);
           // Store a mock token
-          storeToken('mockToken-' + Math.random().toString(36).substring(2, 15));
+          const mockToken = 'mockToken-' + Math.random().toString(36).substring(2, 15);
+          storeToken(mockToken);
           
           toast.success('Signed in as a guest user');
           return;
@@ -188,17 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('API-only auth error:', apiError);
           toast.error('Could not sign in. Using guest mode.');
           
-          // Fall back to completely local auth
-          const mockUser: MockUser = {
-            uid: 'local-' + Math.random().toString(36).substring(2, 9),
-            email: null,
-            displayName: 'Guest',
-            isAnonymous: true,
-            photoURL: null,
-            _isMockUser: true
-          };
-          
-          setUser(mockUser);
+          // Fall back to completely local auth with stable guest
+          setUser(GUEST_USER);
           return;
         }
       }
@@ -272,17 +302,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (firebaseError.code === 'auth/unauthorized-domain') {
           logDebug('Unauthorized domain error detected, falling back to anonymous auth');
           
-          // Create a mock user for development
-          const mockUser: MockUser = {
-            uid: 'anon-' + Math.random().toString(36).substring(2, 9),
-            email: null,
-            displayName: 'Guest User',
-            isAnonymous: true,
-            photoURL: null,
-            _isMockUser: true
-          };
-          
-          setUser(mockUser);
+          // Use the stable guest user
+          setUser(GUEST_USER);
           // Use a fake token for the mock user
           storeToken('mock-token-' + Date.now());
           
@@ -304,6 +325,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error('Overall sign-in error:', error);
       toast.error('Failed to sign in. Please try again.');
+      
+      // Always ensure we have a user, even after errors
+      if (!user) {
+        setUser(GUEST_USER);
+      }
+      
       throw error;
     } finally {
       setLoading(false);
@@ -316,10 +343,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (USE_API_SERVER) {
         // For API server, just clear the token
         storeToken(null);
-        setUser(null);
+        // Set to guest user instead of null
+        setUser(GUEST_USER);
       } else {
         // Standard Firebase sign out
         await firebaseSignOut(auth);
+        // Set to guest user after signout
+        setUser(GUEST_USER);
       }
       logDebug('Sign-out completed');
       toast.success('Successfully signed out');

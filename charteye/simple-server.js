@@ -156,15 +156,32 @@ app.use('/api', (req, res, next) => {
     return next();
   }
   
+  // For authentication endpoints, always forward the request rather than health-checking first
+  if (req.path.includes('/auth/')) {
+    console.log(`[API Forward] Directly forwarding auth request to API server: ${req.path}`);
+    return next();
+  }
+  
   // Try to connect to the API server's health endpoint
   const apiCheckUrl = `${API_URL}/api/health`;
   console.log(`[API Check] Checking API availability at ${apiCheckUrl}`);
   
-  fetch(apiCheckUrl, { 
+  // Use node-fetch with proper timeout handling
+  const fetchOptions = { 
     method: 'GET',
-    timeout: 2000,  // 2 second timeout for health check
     headers: { 'Accept': 'application/json' }
-  })
+  };
+  
+  // Create a timeout promise
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Health check timeout')), 2000);
+  });
+  
+  // Race the fetch against the timeout
+  Promise.race([
+    fetch(apiCheckUrl, fetchOptions),
+    timeoutPromise
+  ])
   .then(response => {
     if (response.ok) {
       console.log('[API Check] API server is available');
