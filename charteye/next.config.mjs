@@ -22,10 +22,6 @@ const nextConfig = {
   // Disable source maps in production to improve build times
   productionBrowserSourceMaps: false,
   
-  // Explicitly disable typechecking for faster builds
-  transpilePackages: [],
-  swcMinify: true, // Use SWC for minification
-  
   images: {
     remotePatterns: [
       {
@@ -43,9 +39,8 @@ const nextConfig = {
     unoptimized: true, // Required for static export
   },
   
-  // Disable experimental features that might cause issues
+  // Updated experimental features
   experimental: {
-    appDir: true,
     esmExternals: true
   }
 };

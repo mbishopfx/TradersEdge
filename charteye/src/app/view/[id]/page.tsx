@@ -24,7 +24,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
   );
 }
 
-export default function ViewSharedAnalysis({ params }: { params: { id: string } }) {
+function ViewSharedAnalysisClient({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -189,4 +189,17 @@ export default function ViewSharedAnalysis({ params }: { params: { id: string } 
       </div>
     </ErrorBoundary>
   );
+}
+
+// Server Component Wrapper
+export default function ViewSharedAnalysis({ params }: { params: { id: string } }) {
+  return <ViewSharedAnalysisClient params={params} />;
+}
+
+// This function is required for static site generation with dynamic routes
+export async function generateStaticParams() {
+  // Since we don't know all possible IDs at build time,
+  // we'll return an empty array and handle missing routes at runtime
+  // or we could fetch some popular/featured analyses to pre-generate
+  return [];
 } 
