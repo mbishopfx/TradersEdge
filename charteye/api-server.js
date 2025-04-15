@@ -30,7 +30,38 @@ app.use(express.json());
 
 // Attempt to initialize Firebase services - but don't crash if they fail
 let getChartAnalysis = null;
+let firebaseAdmin = null;
+
 try {
+  // Initialize Firebase Admin
+  const admin = require('firebase-admin');
+  if (!admin.apps.length) {
+    try {
+      // Try to use service account from file
+      const serviceAccountPath = path.join(__dirname, 'charteye-5be44-firebase-adminsdk-fbsvc-df22fdb29f.json');
+      if (fs.existsSync(serviceAccountPath)) {
+        const serviceAccount = require(serviceAccountPath);
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+          storageBucket: 'charteye-5be44.appspot.com'
+        });
+        console.log('Firebase Admin initialized with service account file');
+      } else {
+        // Try to use environment variables
+        const projectId = process.env.FIREBASE_PROJECT_ID || 'charteye-5be44';
+        admin.initializeApp({
+          projectId: projectId,
+          storageBucket: `${projectId}.appspot.com`
+        });
+        console.log('Firebase Admin initialized with project ID:', projectId);
+      }
+    } catch (initError) {
+      console.error('Failed to initialize Firebase Admin:', initError);
+    }
+  }
+  firebaseAdmin = admin;
+  
+  // Load Firebase client services
   const firebaseServices = require('./src/lib/services/firebase');
   getChartAnalysis = firebaseServices.getChartAnalysis;
   console.log('Firebase services loaded successfully');
@@ -56,6 +87,49 @@ const getMockAnalysis = (id) => {
     createdAt: new Date().toISOString()
   };
 };
+
+// Handle authentication
+app.post('/api/auth/token', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({ error: 'Missing ID token' });
+    }
+    
+    if (!firebaseAdmin) {
+      // If Firebase Admin isn't available, return a mock token for development
+      console.log('Firebase Admin not available - returning mock auth response');
+      return res.json({
+        uid: 'mock-user-123',
+        email: 'mockuser@example.com',
+        displayName: 'Mock User',
+        isAuthenticated: true,
+        _devMode: true
+      });
+    }
+    
+    try {
+      // Verify the token
+      const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
+      console.log('Authentication successful for user:', decodedToken.uid);
+      
+      // Return the user data
+      res.json({
+        uid: decodedToken.uid,
+        email: decodedToken.email || '',
+        displayName: decodedToken.name || '',
+        isAuthenticated: true
+      });
+    } catch (authError) {
+      console.error('Error verifying auth token:', authError);
+      res.status(401).json({ error: 'Invalid authentication token' });
+    }
+  } catch (error) {
+    console.error('Auth error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // API Routes
 app.get('/api/analysis/:id/public', async (req, res) => {
@@ -101,6 +175,57 @@ app.get('/api/health', (req, res) => {
     port: port,
     server: 'api'
   });
+});
+
+// User analyses endpoint
+app.get('/api/user/analyses', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let userId = 'dev-user-123';
+    let isAuthenticated = false;
+    
+    if (authHeader && authHeader.startsWith('Bearer ') && firebaseAdmin) {
+      try {
+        // Verify the token
+        const token = authHeader.substring(7);
+        const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
+        userId = decodedToken.uid;
+        isAuthenticated = true;
+      } catch (authError) {
+        console.error('Authentication error:', authError);
+        // In development mode, we'll continue with the default userId
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(401).json({ error: 'Invalid authentication token' });
+        }
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      // In production, require authentication
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Return mock analyses for the user
+    res.json({
+      analyses: [
+        {
+          id: 'sample-1',
+          title: 'Sample Analysis 1',
+          createdAt: new Date().toISOString(),
+          imageUrl: 'https://placehold.co/800x600?text=Sample+1'
+        },
+        {
+          id: 'sample-2',
+          title: 'Sample Analysis 2',
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          imageUrl: 'https://placehold.co/800x600?text=Sample+2'
+        }
+      ],
+      userId,
+      isAuthenticated
+    });
+  } catch (error) {
+    console.error('Error in /api/user/analyses:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Generic routes for static build

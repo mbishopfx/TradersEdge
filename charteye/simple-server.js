@@ -1,163 +1,133 @@
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const http = require('http');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const port = process.env.PORT || 10000;
-const apiPort = process.env.API_PORT || 3001;
+let port = process.env.PORT || 10000;
+const API_PORT = process.env.API_PORT || 3001;
+const API_URL = process.env.API_URL || `http://localhost:${API_PORT}`;
 
-// Determine which output directory to use
-let staticDir = 'out';
-if (!fs.existsSync(path.join(__dirname, 'out'))) {
-  console.log('Output directory "out" not found, checking for .next...');
-  if (fs.existsSync(path.join(__dirname, '.next'))) {
-    staticDir = '.next';
-    console.log('Using .next directory for static files');
-  } else {
-    console.warn('WARNING: Neither "out" nor ".next" directories found!');
-    // Create an empty out directory to prevent errors
-    fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
+// Load environment variables from .env.local if present
+try {
+  const envPath = path.join(__dirname, '.env.local');
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    console.log(`Loaded environment variables from ${envPath}`);
   }
+} catch (error) {
+  console.error('Error loading environment variables:', error);
 }
 
-console.log(`Serving static files from ${path.join(__dirname, staticDir)}`);
+// CORS configuration
+app.use(cors());
 
-// Serve static files from the output directory
-app.use(express.static(path.join(__dirname, staticDir)));
+// Path to the static files (Next.js export output)
+const staticDir = path.join(__dirname, 'out');
 
-// Setup health check endpoint
+// Set up proxy for API routes to forward to the API server
+app.use('/api', createProxyMiddleware({
+  target: API_URL,
+  changeOrigin: true,
+  pathRewrite: { '^/api': '/api' },
+  onProxyReq: (proxyReq, req, res) => {
+    console.log(`[Proxy] ${req.method} ${req.url} -> ${API_URL}${req.url}`);
+    
+    // Add content-length header for POST requests with a body
+    if (req.method === 'POST' && req.body) {
+      const bodyData = JSON.stringify(req.body);
+      proxyReq.setHeader('Content-Type', 'application/json');
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      proxyReq.write(bodyData);
+    }
+  },
+  onError: (err, req, res) => {
+    console.error('[Proxy Error]', err);
+    res.status(500).json({ 
+      error: 'Proxy Error', 
+      message: 'Failed to connect to API server',
+      path: req.url
+    });
+  }
+}));
+
+// Parse JSON before the proxy middleware
+app.use(express.json());
+
+// Serve static files from the 'out' directory
+app.use(express.static(staticDir, {
+  maxAge: '1h', // Cache static assets for 1 hour
+  etag: true,
+  index: false // Don't serve index.html for directory requests
+}));
+
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    server: 'static',
-    staticDir,
-    port
+    environment: process.env.NODE_ENV,
+    port,
+    server: 'static'
   });
 });
 
-// Helper function to check if API server is running using http module instead of fetch
-const checkApiServer = () => {
-  return new Promise((resolve) => {
-    const req = http.get(`http://localhost:${apiPort}/api/health`, (res) => {
-      if (res.statusCode === 200) {
-        let data = '';
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          console.log('API server health check response:', data);
-          resolve(true);
-        });
-      } else {
-        console.log(`API server returned status: ${res.statusCode}`);
-        resolve(false);
-      }
-    });
-    
-    req.on('error', (err) => {
-      console.log(`API server health check error: ${err.message}`);
-      resolve(false);
-    });
-    
-    // Set timeout to 2 seconds
-    req.setTimeout(2000, () => {
-      console.log('API server health check timed out');
-      req.destroy();
-      resolve(false);
-    });
-  });
-};
-
-// Configure proxy middleware for API requests with error handling
-const proxyOptions = {
-  target: `http://localhost:${apiPort}`,
-  changeOrigin: true,
-  pathRewrite: {
-    '^/api': '/api', // No rewrite needed
-  },
-  logLevel: 'info',  // Changed from debug to reduce log noise
-  onError: (err, req, res) => {
-    console.error(`Proxy error for ${req.url}:`, err.message);
-    
-    // Try to serve a static JSON file as fallback (for static export)
-    const apiPath = req.url.replace(/^\/api/, '');
-    const staticApiPath = path.join(__dirname, staticDir, 'api', apiPath, 'index.json');
-    
-    if (fs.existsSync(staticApiPath)) {
-      console.log(`Serving static API fallback: ${staticApiPath}`);
-      try {
-        const data = JSON.parse(fs.readFileSync(staticApiPath, 'utf8'));
-        res.json(data);
-      } catch (readError) {
-        console.error(`Error reading static API fallback: ${readError.message}`);
-        res.status(502).json({
-          error: 'Static API fallback failed',
-          message: 'Could not read static API data.',
-          static: true,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } else {
-      // If no static API fallback, return a generic response
-      res.status(502).json({
-        error: 'API server unavailable',
-        message: 'The API server is not responding. The application will continue to function with limited features.',
-        path: req.url,
-        static: true,
-        timestamp: new Date().toISOString()
-      });
-    }
+// Handle all routes for single page application
+// This will redirect all routes to index.html
+app.get('*', (req, res, next) => {
+  // Skip API routes (already handled by proxy)
+  if (req.path.startsWith('/api/')) {
+    return next();
   }
-};
-
-// Setup proxy with retries
-let proxySetupAttempts = 0;
-const maxProxySetupAttempts = 5;
-
-const setupProxy = () => {
-  console.log(`Setting up API proxy to http://localhost:${apiPort} (attempt ${proxySetupAttempts + 1}/${maxProxySetupAttempts})`);
   
-  checkApiServer().then(isRunning => {
-    if (isRunning) {
-      console.log('✅ API server is running. Setting up proxy.');
-      // Proxy API requests to the API server
-      app.use('/api', createProxyMiddleware(proxyOptions));
-      console.log('API proxy successfully configured');
-    } else {
-      proxySetupAttempts++;
-      console.warn(`⚠️ API server not detected at http://localhost:${apiPort}`);
-      
-      if (proxySetupAttempts < maxProxySetupAttempts) {
-        console.log(`Will retry proxy setup in 3 seconds...`);
-        setTimeout(setupProxy, 3000);
-      } else {
-        console.error(`❌ Failed to connect to API server after ${maxProxySetupAttempts} attempts.`);
-        console.log('Setting up API proxy anyway, will use static fallbacks when needed');
-        app.use('/api', createProxyMiddleware(proxyOptions));
-      }
-    }
-  });
-};
-
-// Start the proxy setup process
-setupProxy();
-
-// Handle all other routes by serving index.html
-app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, staticDir, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(404).send('Application is not built properly. Index file not found.');
+  // Check if the requested file exists
+  const filePath = path.join(staticDir, req.path);
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    return res.sendFile(filePath);
   }
+  
+  // For routes like /about, /profile etc., serve the index.html
+  console.log(`Route ${req.path} not found, serving index.html instead`);
+  res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Static server running at http://localhost:${port}/`);
-  console.log(`Serving files from ${path.join(__dirname, staticDir)}`);
-  console.log(`API requests will be proxied to http://localhost:${apiPort}`);
+const server = app.listen(port, () => {
+  console.log(`✅ Static server running at http://localhost:${port}/`);
+}).on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${port} is already in use`);
+    port++;
+    console.log(`Attempting to use port ${port} instead...`);
+    
+    app.listen(port, () => {
+      console.log(`✅ Static server running at http://localhost:${port}/`);
+    }).on('error', (err) => {
+      console.error(`❌ Failed to start server on port ${port}:`, err);
+      process.exit(1);
+    });
+  } else {
+    console.error(`❌ Failed to start server:`, error);
+    process.exit(1);
+  }
 });
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log('Received shutdown signal. Closing static server gracefully...');
+  server.close(() => {
+    console.log('Static server closed');
+    process.exit(0);
+  });
+  
+  // Force close if it takes too long
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Listen for termination signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
