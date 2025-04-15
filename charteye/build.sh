@@ -53,6 +53,42 @@ EOL
 # Create any missing directories
 echo "=== Setting up path aliases ==="
 mkdir -p src/contexts
+
+# Create news-data directory with sample data
+echo "=== Creating news-data directory with sample data ==="
+mkdir -p news-data
+if [ ! -f news-data/metadata.json ]; then
+  echo "Creating sample metadata.json for news data"
+  cat > news-data/metadata.json << EOL
+{
+  "last_scrape": "$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")",
+  "latest_headlines": [
+    "Gold hits new record high as inflation concerns persist",
+    "USD strengthens against major currencies after Fed comments",
+    "European markets close higher amid economic recovery hopes",
+    "Oil prices stabilize following production cut agreements",
+    "Fed officials signal potential pause in rate hikes",
+    "Tech stocks rally as earnings beat expectations",
+    "JPY weakens as Bank of Japan maintains dovish stance",
+    "Bitcoin volatility increases ahead of regulatory decisions",
+    "Treasury yields rise on strong economic data",
+    "Market awaits US inflation report due next week"
+  ],
+  "sources": [
+    "Reuters",
+    "Bloomberg",
+    "CNBC",
+    "Financial Times",
+    "Wall Street Journal"
+  ],
+  "symbols": ["XAU", "USD", "EUR", "JPY", "GBP", "BTC", "ETH"],
+  "version": "1.0",
+  "note": "This is sample data for when live scraped data is unavailable."
+}
+EOL
+  echo "Sample metadata.json created"
+fi
+
 if [ ! -f src/contexts/AuthContext.tsx ]; then
   echo "Creating placeholder AuthContext.tsx"
   echo "import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -130,6 +166,15 @@ mkdir -p logs
 
 # Create a PID directory for tracking processes
 mkdir -p pids
+
+# Create news-data directory if it doesn't exist
+echo "Ensuring news-data directory exists..."
+mkdir -p news-data
+chmod 755 news-data
+
+# Set NEWS_DATA_DIR environment variable to be available to the API
+export NEWS_DATA_DIR=\$(pwd)/news-data
+echo "NEWS_DATA_DIR set to: \$NEWS_DATA_DIR"
 
 # Function to check if a process is running
 is_running() {

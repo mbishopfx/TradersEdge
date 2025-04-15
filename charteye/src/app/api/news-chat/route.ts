@@ -22,12 +22,51 @@ const embeddings = new OpenAIEmbeddings({
   openAIApiKey: process.env.OPENAI_API_KEY,
 });
 
-// Path to news data directory
+// Path to news data directory - handle both local and Render environments
 function getNewsDataDir() {
+  // Check for environment variables that might be set in deployment
   if (process.env.NEWS_DATA_DIR) {
     return process.env.NEWS_DATA_DIR;
   }
-  return path.join(process.cwd(), 'news-data');
+  
+  // Try multiple possible locations
+  const possiblePaths = [
+    // Default path relative to project root
+    path.join(process.cwd(), 'news-data'),
+    // Absolute path for Render
+    '/data/news-data',
+    // Path relative to the server directory
+    path.join(process.cwd(), '..', 'news-data'),
+    // Path relative to the Next.js app directory
+    path.join(process.cwd(), '..', '..', 'news-data')
+  ];
+  
+  // Try each path and use the first one that exists or is creatable
+  for (const dirPath of possiblePaths) {
+    try {
+      if (!fs.existsSync(dirPath)) {
+        // Try to create the directory
+        console.log(`[News Chat API] Attempting to create directory: ${dirPath}`);
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      
+      // Test if directory is writable
+      const testFile = path.join(dirPath, '.test-write');
+      fs.writeFileSync(testFile, 'test');
+      fs.unlinkSync(testFile);
+      
+      console.log(`[News Chat API] Using news data directory: ${dirPath}`);
+      return dirPath;
+    } catch (error: any) {
+      console.log(`[News Chat API] Cannot use directory ${dirPath}: ${error.message}`);
+      // Continue to next path
+    }
+  }
+  
+  // If no path works, fall back to default
+  const defaultPath = path.join(process.cwd(), 'news-data');
+  console.log(`[News Chat API] Falling back to default path: ${defaultPath}`);
+  return defaultPath;
 }
 
 interface NewsDocument {

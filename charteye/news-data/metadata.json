@@ -1,25 +1,25 @@
 {
-  "last_scrape": "2025-04-07T15:30:20.582782",
+  "last_scrape": "2024-04-15T12:00:00.000Z",
   "latest_headlines": [
-    "This, in turn, suggests that the path of least resistance for spot prices remains to the downside",
-    "This is followed by the 148.00 round figure, which if cleared decisively might trigger a near-term short-covering rally",
-    "This, however, does little to impress the JPY bulls",
-    "The Fed is monitoring uncertainty from the Trump administration's trade policies, Powell added further",
-    "Why? Because the Japanese currency is a safe-haven asset sensitive to tensions in Asia",
-    "This reading beat the market expectation of 135,000 by a wide margin and boosted the USD",
-    "In the meantime, US President Donald Trump said on Sunday that unless the China trade deficit is solved, there will be no deal",
-    "Following these developments, safe-haven flows dominate the action in financial markets on Monday",
-    "At the time of press, US stock index futures were down between 3.4% and 4% on the day, while the UK's FTSE 100 Index was losing more than 4.5%",
-    "In the absence of high-tier data releases, the risk-averse market atmosphere could continue to cap the pair's upside",
-    "Rising global trade war fears Trade tensions are ratcheting up fast",
-    "In addition, robust US jobs data (+228K) and hawkish commentary from Fed Chair Jerome Powell only added to the downward pressure",
-    "The delicate balance of the Fed Across the Pacific, the Federal Reserve (Fed) faces a delicate balancing act",
-    "Escalating trade conflicts could stoke inflation, justifying further rate hikes",
-    "At the same time, signs of a cooling US economy argue for caution despite a still-solid labour market",
-    "Weak Canadian labor market data has prompted BoC dovish bets",
-    "Trump s tariffs have exposed the US economy to a recession",
-    "The BoC is under significant pressure to continue lowering interest rates",
-    "However, CAD investors will be looking to reassess the state of play between the Fed and the BoC heading into the middle quarters of the year",
-    "Political turmoil at both home and abroad will threaten the Canadian Dollar heading into 2025"
-  ]
+    "Gold hits new record high as inflation concerns persist",
+    "USD strengthens against major currencies after Fed comments",
+    "European markets close higher amid economic recovery hopes",
+    "Oil prices stabilize following production cut agreements",
+    "Fed officials signal potential pause in rate hikes",
+    "Tech stocks rally as earnings beat expectations",
+    "JPY weakens as Bank of Japan maintains dovish stance",
+    "Bitcoin volatility increases ahead of regulatory decisions",
+    "Treasury yields rise on strong economic data",
+    "Market awaits US inflation report due next week"
+  ],
+  "sources": [
+    "Reuters",
+    "Bloomberg",
+    "CNBC",
+    "Financial Times",
+    "Wall Street Journal"
+  ],
+  "symbols": ["XAU", "USD", "EUR", "JPY", "GBP", "BTC", "ETH"],
+  "version": "1.0",
+  "note": "This is fallback data for when live scraped data is unavailable."
 }

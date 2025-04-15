@@ -23,6 +23,17 @@ try {
   console.error('Error loading environment variables:', error);
 }
 
+// Ensure news-data directory exists
+const newsDataDir = process.env.NEWS_DATA_DIR || path.join(__dirname, 'news-data');
+try {
+  if (!fs.existsSync(newsDataDir)) {
+    console.log(`[API Server] Creating news-data directory at ${newsDataDir}`);
+    fs.mkdirSync(newsDataDir, { recursive: true });
+  }
+} catch (err) {
+  console.error(`[API Server] Error creating news-data directory: ${err.message}`);
+}
+
 // Enable CORS for all routes
 app.use(cors({
   origin: '*', // Allow all origins

@@ -15,6 +15,15 @@ mkdir -p logs
 # Create a PID directory for tracking processes
 mkdir -p pids
 
+# Create news-data directory if it doesn't exist
+echo "Ensuring news-data directory exists..."
+mkdir -p news-data
+chmod 755 news-data
+
+# Set NEWS_DATA_DIR environment variable to be available to the API
+export NEWS_DATA_DIR=$(pwd)/news-data
+echo "NEWS_DATA_DIR set to: $NEWS_DATA_DIR"
+
 # Function to check if a process is running
 is_running() {
   local pid=$1

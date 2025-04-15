@@ -228,5 +228,64 @@ if (fs.existsSync(publicDir)) {
   }
 } 
 
+// Copy news-data directory if it exists
+const newsDataDir = path.join(__dirname, 'news-data');
+const outputNewsDataDir = path.join(outDir, 'news-data');
+
+if (fs.existsSync(newsDataDir)) {
+  console.log('Copying news-data directory...');
+  
+  try {
+    // Create news-data directory in output
+    if (!fs.existsSync(outputNewsDataDir)) {
+      fs.mkdirSync(outputNewsDataDir, { recursive: true });
+    }
+    
+    // Copy all files from news-data
+    fs.readdirSync(newsDataDir).forEach(file => {
+      const srcPath = path.join(newsDataDir, file);
+      const destPath = path.join(outputNewsDataDir, file);
+      
+      if (fs.statSync(srcPath).isFile()) {
+        fs.copyFileSync(srcPath, destPath);
+        console.log(`Copied news data: ${file}`);
+      }
+    });
+    
+    console.log('News data copied successfully!');
+  } catch (newsError) {
+    console.error('Error copying news data:', newsError);
+  }
+} else {
+  console.log('No news-data directory found, creating empty one...');
+  
+  try {
+    // Create an empty news-data directory
+    if (!fs.existsSync(outputNewsDataDir)) {
+      fs.mkdirSync(outputNewsDataDir, { recursive: true });
+    }
+    
+    // Create a basic metadata.json file if it doesn't exist
+    const metadataPath = path.join(outputNewsDataDir, 'metadata.json');
+    if (!fs.existsSync(metadataPath)) {
+      const fallbackMetadata = {
+        last_scrape: new Date().toISOString(),
+        latest_headlines: [
+          "Fallback headline for testing purposes",
+          "Markets remain stable in latest trading session",
+          "Economic data shows mixed signals for growth"
+        ],
+        version: "1.0",
+        note: "This is fallback data created during build"
+      };
+      
+      fs.writeFileSync(metadataPath, JSON.stringify(fallbackMetadata, null, 2));
+      console.log('Created fallback metadata.json file');
+    }
+  } catch (createError) {
+    console.error('Error creating news-data directory:', createError);
+  }
+}
+
 console.log('Fallback build completed successfully.');
 process.exit(0); 
