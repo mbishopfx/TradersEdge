@@ -6,13 +6,13 @@ import { getAnalytics } from 'firebase/analytics';
 
 // Use fallback values if environment variables are not available
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBw9ZQtHwDbCYOzXZF78kT9-K5SKnTcXbs",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBV1JmWmbq9Zz78aU3PyBu2ERgvQNKDJiU",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "charteye-5be44.firebaseapp.com",
   databaseURL: "https://charteye-5be44-default-rtdb.firebaseio.com",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "charteye-5be44",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "charteye-5be44.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "756444071308",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:756444071308:web:0db6cb6abf6ab6f736e452",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "charteye-5be44.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1088594164829",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1088594164829:web:c159dd2c36161e532fe1b4",
   measurementId: "G-JNFPR6PQT6"
 };
 

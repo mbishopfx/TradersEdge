@@ -2,12 +2,24 @@
 # Start both the static server and API server with robust process management for Render
 echo "Starting servers for Render deployment..."
 
+# Load environment variables from .env.render if it exists and we're on Render
+if [ "$RENDER" = "true" ] && [ -f .env.render ]; then
+  echo "Loading environment variables from .env.render for Render deployment..."
+  export $(grep -v '^#' .env.render | xargs)
+  echo "Environment variables loaded from .env.render"
+fi
+
 # Set environment variables
 export PORT=${PORT:-10000}
 export API_PORT=${API_PORT:-3001}
 export NODE_ENV=${NODE_ENV:-production}
 export RENDER=true
 export RENDER_SERVICE_ID=${RENDER_SERVICE_ID:-local}
+
+# Export Firebase config for the API server
+export FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-charteye-5be44}
+export FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET:-charteye-5be44.firebasestorage.app}
+export FIREBASE_DATABASE_URL=${FIREBASE_DATABASE_URL:-https://charteye-5be44-default-rtdb.firebaseio.com}
 
 # Create a log directory if it doesn't exist
 mkdir -p logs

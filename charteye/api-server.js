@@ -124,7 +124,8 @@ try {
           const projectId = process.env.FIREBASE_PROJECT_ID || 'charteye-5be44';
           admin.initializeApp({
             projectId: projectId,
-            storageBucket: `${projectId}.appspot.com`
+            storageBucket: `${projectId}.firebasestorage.app`,
+            databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
           });
           console.log('[Firebase] Admin initialized with project ID:', projectId);
         }

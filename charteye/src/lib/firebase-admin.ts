@@ -20,7 +20,8 @@ if (!apps.length) {
       
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: 'charteye-5be44.appspot.com'
+        storageBucket: 'charteye-5be44.firebasestorage.app',
+        databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
       });
       
       console.log('Firebase Admin initialized successfully with service account file');
@@ -50,7 +51,8 @@ if (!apps.length) {
           clientEmail,
           privateKey
         }),
-        storageBucket: `${projectId}.appspot.com`
+        storageBucket: `${projectId}.firebasestorage.app`,
+        databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
       });
       
       console.log('Firebase Admin initialized successfully with env variables');

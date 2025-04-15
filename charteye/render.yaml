@@ -12,19 +12,27 @@ services:
       - key: API_PORT
         value: 3001
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
-        sync: false
+        value: AIzaSyBV1JmWmbq9Zz78aU3PyBu2ERgvQNKDJiU
       - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-        sync: false
+        value: charteye-5be44.firebaseapp.com
       - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        sync: false
+        value: charteye-5be44
       - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-        sync: false
+        value: charteye-5be44.firebasestorage.app
       - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-        sync: false
+        value: "1088594164829"
       - key: NEXT_PUBLIC_FIREBASE_APP_ID
-        sync: false
+        value: "1:1088594164829:web:c159dd2c36161e532fe1b4"
+      - key: NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        value: https://charteye-5be44-default-rtdb.firebaseio.com
       - key: FIREBASE_PROJECT_ID
-        sync: false
+        value: charteye-5be44
+      - key: FIREBASE_STORAGE_BUCKET
+        value: charteye-5be44.firebasestorage.app
+      - key: API_DEBUG
+        value: "true"
+      - key: USE_FALLBACK
+        value: "true"
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY
@@ -49,7 +57,7 @@ services:
         sync: false
       - key: NEXT_PUBLIC_APP_URL
         sync: false
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     autoDeploy: true
 
   - type: cron
