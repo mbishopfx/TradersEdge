@@ -1,6 +1,10 @@
 import { getAllPublicAnalysisIds } from '@/lib/services/firebase';
 import ViewSharedAnalysis from './page';
 
+// Configure for static export
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate every hour
+
 // This is required for static export with dynamic routes
 export async function generateStaticParams() {
   try {
@@ -20,6 +24,12 @@ export async function generateStaticParams() {
     ];
   }
 }
+
+// Metadata for the page
+export const metadata = {
+  title: 'View Chart Analysis | ChartEye',
+  description: 'View AI-powered trading chart analysis',
+};
 
 export default function Page({ params }: { params: { id: string } }) {
   return <ViewSharedAnalysis params={params} />;
