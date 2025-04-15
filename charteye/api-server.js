@@ -91,43 +91,71 @@ const getMockAnalysis = (id) => {
 // Handle authentication
 app.post('/api/auth/token', async (req, res) => {
   try {
+    console.log('[API Auth] Received token request');
+    
+    // Check if the request body exists
+    if (!req.body) {
+      console.error('[API Auth] Missing request body');
+      return res.status(400).json({ 
+        error: 'Missing request body', 
+        success: false 
+      });
+    }
+    
     const { idToken } = req.body;
     
+    // Validate the token
     if (!idToken) {
-      return res.status(400).json({ error: 'Missing ID token' });
+      console.error('[API Auth] Missing ID token in request body');
+      return res.status(400).json({ 
+        error: 'Missing ID token', 
+        success: false 
+      });
     }
+    
+    console.log('[API Auth] Token received, length:', idToken.length);
     
     if (!firebaseAdmin) {
       // If Firebase Admin isn't available, return a mock token for development
-      console.log('Firebase Admin not available - returning mock auth response');
+      console.log('[API Auth] Firebase Admin not available - returning mock auth response');
       return res.json({
         uid: 'mock-user-123',
         email: 'mockuser@example.com',
         displayName: 'Mock User',
         isAuthenticated: true,
-        _devMode: true
+        _devMode: true,
+        success: true
       });
     }
     
     try {
       // Verify the token
       const decodedToken = await firebaseAdmin.auth().verifyIdToken(idToken);
-      console.log('Authentication successful for user:', decodedToken.uid);
+      console.log('[API Auth] Authentication successful for user:', decodedToken.uid);
       
       // Return the user data
       res.json({
         uid: decodedToken.uid,
         email: decodedToken.email || '',
-        displayName: decodedToken.name || '',
-        isAuthenticated: true
+        displayName: decodedToken.name || decodedToken.displayName || '',
+        isAuthenticated: true,
+        success: true
       });
     } catch (authError) {
-      console.error('Error verifying auth token:', authError);
-      res.status(401).json({ error: 'Invalid authentication token' });
+      console.error('[API Auth] Error verifying auth token:', authError);
+      res.status(401).json({ 
+        error: 'Invalid authentication token',
+        message: authError.message || 'Token validation failed',
+        success: false 
+      });
     }
   } catch (error) {
-    console.error('Auth error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[API Auth] General auth error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      message: error.message || 'Unknown error processing authentication request',
+      success: false 
+    });
   }
 });
 

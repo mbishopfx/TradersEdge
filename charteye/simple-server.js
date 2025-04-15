@@ -23,8 +23,25 @@ try {
 // CORS configuration
 app.use(cors());
 
+// Parse JSON BEFORE the proxy middleware
+app.use(express.json());
+
 // Path to the static files (Next.js export output)
 const staticDir = path.join(__dirname, 'out');
+
+// Set up a special middleware for auth token endpoint with additional debugging
+app.use('/api/auth/token', (req, res, next) => {
+  console.log('[Auth Debug] Auth token request received');
+  console.log('[Auth Debug] Method:', req.method);
+  console.log('[Auth Debug] Headers:', JSON.stringify(req.headers));
+  if (req.body) {
+    console.log('[Auth Debug] Body (partial):', JSON.stringify({
+      ...req.body,
+      idToken: req.body.idToken ? '***REDACTED***' : undefined
+    }));
+  }
+  next();
+});
 
 // Set up proxy for API routes to forward to the API server
 app.use('/api', createProxyMiddleware({
@@ -34,12 +51,46 @@ app.use('/api', createProxyMiddleware({
   onProxyReq: (proxyReq, req, res) => {
     console.log(`[Proxy] ${req.method} ${req.url} -> ${API_URL}${req.url}`);
     
-    // Add content-length header for POST requests with a body
-    if (req.method === 'POST' && req.body) {
+    // If the body-parser middleware has already parsed the body, we need to rewrite it
+    if (req.body && Object.keys(req.body).length > 0) {
       const bodyData = JSON.stringify(req.body);
+      // Update content-length header
       proxyReq.setHeader('Content-Type', 'application/json');
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      // Write body to request
       proxyReq.write(bodyData);
+      proxyReq.end();
+    }
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    // Log the status code of the proxied response
+    console.log(`[Proxy Response] ${req.method} ${req.url} -> Status: ${proxyRes.statusCode}`);
+    
+    // Special handling for auth endpoint
+    if (req.url.includes('/auth/token')) {
+      let responseBody = '';
+      const originalWrite = res.write;
+      const originalEnd = res.end;
+      
+      // Capture the response body
+      proxyRes.on('data', (chunk) => {
+        responseBody += chunk.toString('utf8');
+      });
+      
+      // Log response when it completes
+      proxyRes.on('end', () => {
+        try {
+          const parsedBody = JSON.parse(responseBody);
+          console.log('[Auth Debug] Response status:', proxyRes.statusCode);
+          console.log('[Auth Debug] Response (sanitized):', {
+            ...parsedBody,
+            uid: parsedBody.uid ? '***REDACTED***' : undefined,
+            email: parsedBody.email ? '***REDACTED***' : undefined
+          });
+        } catch (e) {
+          console.log('[Auth Debug] Could not parse response body');
+        }
+      });
     }
   },
   onError: (err, req, res) => {
@@ -51,9 +102,6 @@ app.use('/api', createProxyMiddleware({
     });
   }
 }));
-
-// Parse JSON before the proxy middleware
-app.use(express.json());
 
 // Serve static files from the 'out' directory
 app.use(express.static(staticDir, {
@@ -95,6 +143,7 @@ app.get('*', (req, res, next) => {
 // Start the server
 const server = app.listen(port, () => {
   console.log(`✅ Static server running at http://localhost:${port}/`);
+  console.log(`✅ API requests will be proxied to ${API_URL}`);
 }).on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
     console.error(`❌ Port ${port} is already in use`);
