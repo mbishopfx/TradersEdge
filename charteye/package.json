@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "concurrently \"node simple-server.js\" \"node api-server.js\"",
+    "start": "chmod +x ./start.sh && ./start.sh",
     "start:static": "node simple-server.js",
     "start:api": "node api-server.js",
+    "start:dev": "concurrently \"node simple-server.js\" \"node api-server.js\"",
     "lint": "next lint"
   },
   "dependencies": {

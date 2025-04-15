@@ -7,6 +7,11 @@ const app = express();
 let port = process.env.API_PORT || 3001;
 const MAX_PORT = port + 10; // Try up to 10 ports if needed
 
+// Enhanced logging for Render deployment
+console.log(`[API Server] Starting in ${process.env.NODE_ENV || 'development'} mode`);
+console.log(`[API Server] Running on port ${port}`);
+console.log(`[API Server] RENDER env: ${process.env.RENDER || 'not set'}`);
+
 // Load environment variables from .env.local if present
 try {
   const envPath = path.join(__dirname, '.env.local');
@@ -45,29 +50,70 @@ try {
           credential: admin.credential.cert(serviceAccount),
           storageBucket: 'charteye-5be44.appspot.com'
         });
-        console.log('Firebase Admin initialized with service account file');
+        console.log('[Firebase] Admin initialized with service account file');
       } else {
         // Try to use environment variables
-        const projectId = process.env.FIREBASE_PROJECT_ID || 'charteye-5be44';
-        admin.initializeApp({
-          projectId: projectId,
-          storageBucket: `${projectId}.appspot.com`
-        });
-        console.log('Firebase Admin initialized with project ID:', projectId);
+        console.log('[Firebase] Service account file not found, trying environment variables');
+        
+        // Check if we have all required environment variables
+        const hasEnvVars = process.env.FIREBASE_PROJECT_ID && 
+                          process.env.FIREBASE_CLIENT_EMAIL && 
+                          process.env.FIREBASE_PRIVATE_KEY;
+        
+        if (hasEnvVars) {
+          // Initialize with environment variables
+          const projectId = process.env.FIREBASE_PROJECT_ID;
+          
+          try {
+            // Note: The private key needs to be properly formatted from the environment variable
+            const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+            
+            admin.initializeApp({
+              credential: admin.credential.cert({
+                projectId: projectId,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: privateKey
+              }),
+              storageBucket: `${projectId}.appspot.com`
+            });
+            console.log('[Firebase] Admin initialized with environment variables');
+          } catch (pkError) {
+            console.error('[Firebase] Error with private key formatting:', pkError.message);
+            
+            // Fallback to simple project ID initialization
+            admin.initializeApp({
+              projectId: projectId,
+              storageBucket: `${projectId}.appspot.com`
+            });
+            console.log('[Firebase] Admin initialized with project ID only (limited functionality)');
+          }
+        } else {
+          // Last resort - initialize with just the project id
+          const projectId = process.env.FIREBASE_PROJECT_ID || 'charteye-5be44';
+          admin.initializeApp({
+            projectId: projectId,
+            storageBucket: `${projectId}.appspot.com`
+          });
+          console.log('[Firebase] Admin initialized with project ID:', projectId);
+        }
       }
     } catch (initError) {
-      console.error('Failed to initialize Firebase Admin:', initError);
+      console.error('[Firebase] Failed to initialize Firebase Admin:', initError);
     }
   }
   firebaseAdmin = admin;
   
   // Load Firebase client services
-  const firebaseServices = require('./src/lib/services/firebase');
-  getChartAnalysis = firebaseServices.getChartAnalysis;
-  console.log('Firebase services loaded successfully');
+  try {
+    const firebaseServices = require('./src/lib/services/firebase');
+    getChartAnalysis = firebaseServices.getChartAnalysis;
+    console.log('[Firebase] Client services loaded successfully');
+  } catch (serviceError) {
+    console.error('[Firebase] Failed to load Firebase client services:', serviceError);
+  }
 } catch (error) {
-  console.error('Failed to load Firebase services:', error);
-  console.log('API server will use mock data instead');
+  console.error('[Firebase] Main initialization error:', error);
+  console.log('[Firebase] API server will use mock data instead');
 }
 
 // Mock data for development or when Firebase is unavailable
@@ -225,15 +271,34 @@ app.get('/api/analysis/:id/public', async (req, res) => {
 
 // Health check endpoint - Make it the first route for reliability
 app.get('/api/health', (req, res) => {
-  // Send a quick response for health checks
+  // Send a detailed response for health checks
+  const startTime = process.uptime();
+  const uptimeHours = Math.floor(startTime / 3600);
+  const uptimeMinutes = Math.floor((startTime % 3600) / 60);
+  const uptimeSeconds = Math.floor(startTime % 60);
+  
+  const memoryUsage = process.memoryUsage();
+  
   res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+    environment: process.env.NODE_ENV || 'development',
     port: port,
     server: 'api',
     firebaseAvailable: !!firebaseAdmin,
-    uptime: process.uptime()
+    firebaseFunctions: {
+      getChartAnalysis: !!getChartAnalysis
+    },
+    uptime: {
+      seconds: startTime,
+      formatted: `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`
+    },
+    memory: {
+      rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
+    },
+    render: process.env.RENDER === 'true'
   });
 });
 
@@ -401,44 +466,37 @@ process.on('uncaughtException', (error) => {
   console.log('API server will continue running');
 });
 
-// Start the server with retries
-let retries = 5;
+// Look for startServer function and replace with an improved version
 const startServer = () => {
+  // Create server with resilient error handling
   const server = app.listen(port, () => {
     console.log(`✅ API server running at http://localhost:${port}/`);
+    console.log(`${new Date().toISOString()} - API Server started successfully`);
+    
+    // Create a marker file to indicate server is running - useful for monitoring
+    try {
+      fs.writeFileSync('logs/api-running.txt', new Date().toISOString());
+    } catch (err) {
+      console.warn('Could not write server marker file:', err.message);
+    }
   }).on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
       console.error(`❌ Port ${port} is already in use`);
-      
-      // Try the next port if available
       if (port < MAX_PORT) {
         port++;
         console.log(`Attempting to use port ${port} instead...`);
-        startServer();
-      } else if (retries > 0) {
-        // If we've exhausted our port range, wait and retry
-        retries--;
-        console.log(`All ports in range are busy. Retrying in 3 seconds... (${retries} attempts left)`);
-        setTimeout(startServer, 3000);
+        setTimeout(startServer, 1000);
       } else {
-        console.error('Maximum retries exceeded. API server failed to start.');
-        console.error('Please free up port in range', process.env.API_PORT || 3001, 'to', MAX_PORT);
+        console.error(`❌ Exceeded maximum port attempts (${MAX_PORT})`);
         process.exit(1);
       }
     } else {
-      console.error(`Failed to start API server on port ${port}:`, error);
-      if (retries > 0) {
-        retries--;
-        console.log(`Retrying in 3 seconds... (${retries} attempts left)`);
-        setTimeout(startServer, 3000);
-      } else {
-        console.error('Maximum retries exceeded. API server failed to start.');
-        process.exit(1);
-      }
+      console.error(`❌ Failed to start server:`, error);
+      process.exit(1);
     }
   });
-  
-  // Graceful shutdown
+
+  // Graceful shutdown handler
   const gracefulShutdown = () => {
     console.log('Received shutdown signal. Closing API server gracefully...');
     server.close(() => {
@@ -452,10 +510,16 @@ const startServer = () => {
       process.exit(1);
     }, 10000);
   };
-  
+
   // Listen for termination signals
   process.on('SIGTERM', gracefulShutdown);
   process.on('SIGINT', gracefulShutdown);
+  
+  return server;
 };
 
-startServer(); 
+// Start the server
+startServer();
+
+// Export the app for testing
+module.exports = app; 

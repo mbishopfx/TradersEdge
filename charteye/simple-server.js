@@ -4,10 +4,21 @@ const path = require('path');
 const fs = require('fs');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
+// Using native fetch API in newer Node versions
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
 const app = express();
 let port = process.env.PORT || 10000;
 const API_PORT = process.env.API_PORT || 3001;
-const API_URL = process.env.API_URL || `http://localhost:${API_PORT}`;
+// Improved API URL determination for Render deployment
+const API_URL = process.env.API_URL || 
+                (process.env.RENDER && process.env.RENDER_SERVICE_ID 
+                  ? `http://localhost:${API_PORT}` 
+                  : `http://localhost:${API_PORT}`);
+
+console.log(`[Config] Static server configured with API_URL: ${API_URL}`);
+console.log(`[Config] Running in environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`[Config] RENDER env: ${process.env.RENDER || 'not set'}`);
 
 // Load environment variables from .env.local if present
 try {
@@ -162,6 +173,12 @@ app.use('/api', (req, res, next) => {
     return next();
   }
   
+  // On Render, we want to be more lenient with API checks since both servers are on the same instance
+  if (process.env.RENDER) {
+    console.log(`[API Check] Running on Render, skipping health check for ${req.path}`);
+    return next(); // Skip health check on Render and forward request directly
+  }
+  
   // Try to connect to the API server's health endpoint
   const apiCheckUrl = `${API_URL}/api/health`;
   console.log(`[API Check] Checking API availability at ${apiCheckUrl}`);
@@ -172,9 +189,9 @@ app.use('/api', (req, res, next) => {
     headers: { 'Accept': 'application/json' }
   };
   
-  // Create a timeout promise
+  // Create a timeout promise with increased timeout for Render
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Health check timeout')), 2000);
+    setTimeout(() => reject(new Error('Health check timeout')), 5000); // Increased from 2000ms
   });
   
   // Race the fetch against the timeout
@@ -209,13 +226,53 @@ app.use(express.static(staticDir, {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
+  // Capture memory and uptime stats
+  const startTime = process.uptime();
+  const uptimeHours = Math.floor(startTime / 3600);
+  const uptimeMinutes = Math.floor((startTime % 3600) / 60);
+  const uptimeSeconds = Math.floor(startTime % 60);
+  
+  const memoryUsage = process.memoryUsage();
+  
+  // Build the response
+  const response = { 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+    environment: process.env.NODE_ENV || 'development',
     port,
-    server: 'static'
-  });
+    server: 'static',
+    apiServer: {
+      url: API_URL,
+      status: 'checking'
+    },
+    uptime: {
+      seconds: startTime,
+      formatted: `${uptimeHours}h ${uptimeMinutes}m ${uptimeSeconds}s`
+    },
+    memory: {
+      rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
+    },
+    render: process.env.RENDER === 'true'
+  };
+  
+  // Send response immediately without waiting for API check
+  res.json(response);
+  
+  // Log but don't block on API check
+  setTimeout(() => {
+    fetch(`${API_URL}/api/health`, { 
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(response => {
+      console.log(`[Health] API server health check: ${response.ok ? 'OK' : 'Error'}`);
+    })
+    .catch(err => {
+      console.log(`[Health] API server unreachable: ${err.message}`);
+    });
+  }, 10);
 });
 
 // Handle all routes for single page application
