@@ -242,11 +242,12 @@ export async function getSharedAnalyses(analysisId: string): Promise<SharedAnaly
 }
 
 // Get all public analysis IDs for static generation
-export async function getAllPublicAnalysisIds(): Promise<string[]> {
+export const getAllPublicAnalysisIds = async (): Promise<string[]> => {
   return handleFirestoreOperation(async () => {
     try {
-      console.log('Fetching public analysis IDs from Firestore');
-      // Query for public analyses, ordered by creation date
+      console.log('Fetching public analysis IDs for static generation...');
+      
+      // For static generation during build, we need to query Firestore directly
       const q = query(
         collection(db, 'chartAnalyses'),
         where('isPublic', '==', true),
@@ -260,14 +261,26 @@ export async function getAllPublicAnalysisIds(): Promise<string[]> {
       return querySnapshot.docs.map(doc => doc.id);
     } catch (error: any) {
       console.error('Error in getAllPublicAnalysisIds:', error);
-      // If index error, provide helpful message
+      
+      // If index error, provide detailed guidance
       if (error.code === 'failed-precondition' && error.message?.includes('index')) {
-        console.warn('This query requires a Firestore index. Please create it at:', 
-          'https://console.firebase.google.com/project/charteye-5be44/firestore/indexes');
+        console.warn(`
+          This query requires a Firestore index. Please create it at:
+          https://console.firebase.google.com/project/charteye-5be44/firestore/indexes
+          
+          The required index is for collection 'chartAnalyses' with fields:
+          - isPublic (Ascending)
+          - createdAt (Descending)
+          
+          Alternatively, you can deploy the updated firestore.indexes.json file using:
+          firebase deploy --only firestore:indexes
+        `);
       }
       
-      // Return empty array to continue the build process
-      return [];
+      // For static generation, provide at least some placeholder IDs
+      return process.env.NODE_ENV === 'development' 
+        ? ['placeholder1', 'placeholder2', 'placeholder3']
+        : [];
     }
   }, [] as string[]); // Empty array as fallback
 } 
