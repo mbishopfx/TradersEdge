@@ -4,10 +4,26 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const port = process.env.API_PORT || 3001;
+let port = process.env.API_PORT || 3001;
+const MAX_PORT = port + 10; // Try up to 10 ports if needed
+
+// Load environment variables from .env.local if present
+try {
+  const envPath = path.join(__dirname, '.env.local');
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    console.log(`Loaded environment variables from ${envPath}`);
+  }
+} catch (error) {
+  console.error('Error loading environment variables:', error);
+}
 
 // Enable CORS for all routes
-app.use(cors());
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Parse JSON bodies
 app.use(express.json());
@@ -82,7 +98,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    port: port
+    port: port,
+    server: 'api'
   });
 });
 
@@ -98,24 +115,67 @@ app.all('/api/*', (req, res) => {
   });
 });
 
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  console.log('API server will continue running');
+});
+
 // Start the server with retries
 let retries = 5;
 const startServer = () => {
-  try {
-    app.listen(port, () => {
-      console.log(`API server running at http://localhost:${port}/`);
-    });
-  } catch (error) {
-    console.error(`Failed to start API server on port ${port}:`, error);
-    if (retries > 0) {
-      retries--;
-      console.log(`Retrying in 3 seconds... (${retries} attempts left)`);
-      setTimeout(startServer, 3000);
+  const server = app.listen(port, () => {
+    console.log(`✅ API server running at http://localhost:${port}/`);
+  }).on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${port} is already in use`);
+      
+      // Try the next port if available
+      if (port < MAX_PORT) {
+        port++;
+        console.log(`Attempting to use port ${port} instead...`);
+        startServer();
+      } else if (retries > 0) {
+        // If we've exhausted our port range, wait and retry
+        retries--;
+        console.log(`All ports in range are busy. Retrying in 3 seconds... (${retries} attempts left)`);
+        setTimeout(startServer, 3000);
+      } else {
+        console.error('Maximum retries exceeded. API server failed to start.');
+        console.error('Please free up port in range', process.env.API_PORT || 3001, 'to', MAX_PORT);
+        process.exit(1);
+      }
     } else {
-      console.error('Maximum retries exceeded. API server failed to start.');
-      process.exit(1);
+      console.error(`Failed to start API server on port ${port}:`, error);
+      if (retries > 0) {
+        retries--;
+        console.log(`Retrying in 3 seconds... (${retries} attempts left)`);
+        setTimeout(startServer, 3000);
+      } else {
+        console.error('Maximum retries exceeded. API server failed to start.');
+        process.exit(1);
+      }
     }
-  }
+  });
+  
+  // Graceful shutdown
+  const gracefulShutdown = () => {
+    console.log('Received shutdown signal. Closing API server gracefully...');
+    server.close(() => {
+      console.log('API server closed');
+      process.exit(0);
+    });
+    
+    // Force close if it takes too long
+    setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+  
+  // Listen for termination signals
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 };
 
 startServer(); 
