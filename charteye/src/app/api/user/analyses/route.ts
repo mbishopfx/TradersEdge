@@ -12,7 +12,7 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp({
       projectId: 'charteye-5be44',
-      storageBucket: 'charteye-5be44.appspot.com',
+      storageBucket: 'charteye-5be44.firebasestorage.app',
       databaseURL: 'https://charteye-5be44-default-rtdb.firebaseio.com'
     });
     console.log('Firebase Admin initialized in user analyses API route');
