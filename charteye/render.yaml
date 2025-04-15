@@ -2,7 +2,7 @@ services:
   - type: web
     name: charteye
     runtime: node
-    buildCommand: npm install -g typescript && npm install typescript --force && npm ci && npm run build
+    buildCommand: npm install -g typescript && npm install --no-package-lock && npm run build
     startCommand: ./start.sh
     envVars:
       - key: NODE_ENV

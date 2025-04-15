@@ -38,7 +38,7 @@ if [ -d "charteye" ]; then
   else
     echo "ERROR: No build.sh found in charteye directory!"
     echo "Attempting to run npm build directly..."
-    npm ci && npm install typescript --force && npm run build
+    npm install --no-package-lock && npm install typescript --force && npm run build
     BUILD_RESULT=$?
     if [ $BUILD_RESULT -ne 0 ]; then
       echo "Direct npm build failed with exit code: $BUILD_RESULT"
