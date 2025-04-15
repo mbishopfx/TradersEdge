@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "chmod +x ./verify-permissions.sh && ./verify-permissions.sh && chmod +x ./build.sh && ./build.sh",
     "start": "chmod +x ./start.sh && ./start.sh",
     "start:static": "node simple-server.js",
     "start:api": "node api-server.js",

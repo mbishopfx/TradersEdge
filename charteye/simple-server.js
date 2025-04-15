@@ -368,6 +368,10 @@ app.get('/health', (req, res) => {
   
   const memoryUsage = process.memoryUsage();
   
+  // Check API server status
+  const apiCheckUrl = `${API_URL}/api/health`;
+  let apiServerStatus = 'checking';
+  
   // Build the response
   const response = { 
     status: 'ok', 
@@ -375,9 +379,15 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     port,
     server: 'static',
+    build_info: {
+      render: process.env.RENDER === 'true',
+      render_service_id: process.env.RENDER_SERVICE_ID || 'local',
+      fallback_enabled: USE_FALLBACK ? 'true' : 'false',
+      api_debug: API_DEBUG ? 'true' : 'false'
+    },
     apiServer: {
       url: API_URL,
-      status: 'checking'
+      status: apiServerStatus
     },
     uptime: {
       seconds: startTime,
@@ -388,7 +398,14 @@ app.get('/health', (req, res) => {
       heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
       heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`
     },
-    render: process.env.RENDER === 'true'
+    static_dir: staticDir,
+    news_data_dir: NEWS_DATA_DIR,
+    directories: {
+      exists: fs.existsSync(staticDir),
+      content: fs.existsSync(staticDir) ? fs.readdirSync(staticDir).slice(0, 10) : [],
+      news_data_exists: fs.existsSync(NEWS_DATA_DIR),
+      news_data_content: fs.existsSync(NEWS_DATA_DIR) ? fs.readdirSync(NEWS_DATA_DIR) : []
+    }
   };
   
   // Send response immediately without waiting for API check
@@ -409,6 +426,34 @@ app.get('/health', (req, res) => {
   }, 10);
 });
 
+// Special diagnostic endpoint
+app.get('/diagnostic', (req, res) => {
+  const response = {
+    time: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    render: process.env.RENDER === 'true',
+    directories: {
+      current: process.cwd(),
+      static: staticDir,
+      news_data: NEWS_DATA_DIR
+    },
+    files: {
+      static_exists: fs.existsSync(staticDir),
+      static_files: fs.existsSync(staticDir) ? fs.readdirSync(staticDir).slice(0, 20) : [],
+      news_data_exists: fs.existsSync(NEWS_DATA_DIR),
+      news_data_files: fs.existsSync(NEWS_DATA_DIR) ? fs.readdirSync(NEWS_DATA_DIR) : []
+    },
+    environment_variables: Object.keys(process.env)
+      .filter(key => !key.includes('KEY') && !key.includes('SECRET') && !key.includes('TOKEN') && !key.includes('PASSWORD'))
+      .reduce((obj, key) => {
+        obj[key] = process.env[key];
+        return obj;
+      }, {})
+  };
+  
+  res.json(response);
+});
+
 // Handle all routes for single page application
 // This will redirect all routes to index.html
 app.get('*', (req, res, next) => {
@@ -417,15 +462,44 @@ app.get('*', (req, res, next) => {
     return next();
   }
   
-  // Check if the requested file exists
+  // Check if the requested file exists with exact path
   const filePath = path.join(staticDir, req.path);
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     return res.sendFile(filePath);
   }
   
-  // For routes like /about, /profile etc., serve the index.html
-  console.log(`Route ${req.path} not found, serving index.html instead`);
-  res.sendFile(path.join(staticDir, 'index.html'));
+  // For HTML routes, try to find exact HTML file
+  // This helps with static routes like /about.html
+  if (!req.path.endsWith('.html') && !req.path.endsWith('/')) {
+    const htmlPath = path.join(staticDir, `${req.path}.html`);
+    if (fs.existsSync(htmlPath) && fs.statSync(htmlPath).isFile()) {
+      return res.sendFile(htmlPath);
+    }
+  }
+  
+  // Check for index.html in directory
+  if (req.path.endsWith('/')) {
+    const indexPath = path.join(staticDir, req.path, 'index.html');
+    if (fs.existsSync(indexPath) && fs.statSync(indexPath).isFile()) {
+      return res.sendFile(indexPath);
+    }
+  }
+  
+  // Check for directory with index.html
+  const dirIndexPath = path.join(staticDir, req.path, 'index.html');
+  if (fs.existsSync(dirIndexPath) && fs.statSync(dirIndexPath).isFile()) {
+    return res.sendFile(dirIndexPath);
+  }
+  
+  // For SPA routes like /about, /profile etc., serve the index.html
+  console.log(`Route ${req.path} not found as a file, serving index.html instead`);
+  const indexPath = path.join(staticDir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  
+  // If even the index.html doesn't exist, return a 404
+  res.status(404).send('File not found');
 });
 
 // Start the server

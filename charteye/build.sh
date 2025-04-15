@@ -57,6 +57,16 @@ mkdir -p src/contexts
 # Create news-data directory with sample data
 echo "=== Creating news-data directory with sample data ==="
 mkdir -p news-data
+chmod 755 news-data
+
+# Copy news-data to output directory (for static export)
+if [ -d "out" ]; then
+  echo "Copying news-data to output directory..."
+  mkdir -p out/news-data
+  cp -r news-data/* out/news-data/ 2>/dev/null || echo "No files to copy"
+  echo "News data copied to output directory"
+fi
+
 if [ ! -f news-data/metadata.json ]; then
   echo "Creating sample metadata.json for news data"
   cat > news-data/metadata.json << EOL

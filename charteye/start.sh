@@ -1,34 +1,42 @@
 #!/bin/bash
 # Start both the static server and API server with robust process management for Render
+echo "======================================================"
 echo "Starting servers for Render deployment..."
+echo "======================================================"
 
 # Load environment variables from .env.render if it exists and we're on Render
-if [ "$RENDER" = "true" ] && [ -f .env.render ]; then
-  echo "Loading environment variables from .env.render for Render deployment..."
-  export $(grep -v '^#' .env.render | xargs)
+if [ -f .env.render ]; then
+  echo "Loading environment variables from .env.render..."
+  set -a
+  source .env.render
+  set +a
   echo "Environment variables loaded from .env.render"
 fi
 
-# Set environment variables
+# Set environment variables with defaults
 export PORT=${PORT:-10000}
 export API_PORT=${API_PORT:-3001}
 export NODE_ENV=${NODE_ENV:-production}
 export RENDER=true
 export RENDER_SERVICE_ID=${RENDER_SERVICE_ID:-local}
+export API_DEBUG=true
+export USE_FALLBACK=true
 
 # Export Firebase config for the API server
 export FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-charteye-5be44}
 export FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET:-charteye-5be44.firebasestorage.app}
 export FIREBASE_DATABASE_URL=${FIREBASE_DATABASE_URL:-https://charteye-5be44-default-rtdb.firebaseio.com}
 
-# Create a log directory if it doesn't exist
+# Print all environment variables (excluding sensitive ones)
+echo "======================================================"
+echo "Environment Variables:"
+env | grep -v -E 'KEY|SECRET|PASSWORD|TOKEN' | sort
+echo "======================================================"
+
+# Create required directories
+echo "Creating required directories..."
 mkdir -p logs
-
-# Create a PID directory for tracking processes
 mkdir -p pids
-
-# Create news-data directory if it doesn't exist
-echo "Ensuring news-data directory exists..."
 mkdir -p news-data
 chmod 755 news-data
 
@@ -51,45 +59,71 @@ is_running() {
 
 # Function to start the API server
 start_api_server() {
+  echo "======================================================"
   echo "Starting API server on port $API_PORT..."
+  echo "======================================================"
+  # Make sure the log file exists and is writable
+  touch logs/api-server.log
+  chmod 644 logs/api-server.log
+  
+  # Start the API server
   node api-server.js > logs/api-server.log 2>&1 &
   API_PID=$!
   echo $API_PID > pids/api-server.pid
   echo "API server started with PID $API_PID"
   
   # Give the API server a moment to start
-  sleep 3
+  sleep 5
   
   # Check if API server is still running
   if ! is_running $API_PID; then
-    echo "WARNING: API server failed to start - check logs/api-server.log"
-    tail -n 20 logs/api-server.log
+    echo "ERROR: API server failed to start - check logs/api-server.log"
+    echo "======================================================"
+    echo "API Server Logs:"
+    cat logs/api-server.log
+    echo "======================================================"
+    return 1
   else
     echo "API server successfully started"
+    return 0
   fi
 }
 
 # Function to start the static server
 start_static_server() {
+  echo "======================================================"
   echo "Starting static file server on port $PORT..."
+  echo "======================================================"
+  # Make sure the log file exists and is writable
+  touch logs/static-server.log
+  chmod 644 logs/static-server.log
+  
+  # Start the static server
   node simple-server.js > logs/static-server.log 2>&1 &
   STATIC_PID=$!
   echo $STATIC_PID > pids/static-server.pid
   echo "Static server started with PID $STATIC_PID"
   
   # Check if static server started successfully
-  sleep 2
+  sleep 5
   if ! is_running $STATIC_PID; then
-    echo "WARNING: Static server failed to start - check logs/static-server.log"
-    tail -n 20 logs/static-server.log
+    echo "ERROR: Static server failed to start - check logs/static-server.log"
+    echo "======================================================"
+    echo "Static Server Logs:"
+    cat logs/static-server.log
+    echo "======================================================"
+    return 1
   else
     echo "Static server successfully started"
+    return 0
   fi
 }
 
 # Clean up function to handle graceful shutdown
 cleanup() {
+  echo "======================================================"
   echo "Shutting down servers..."
+  echo "======================================================"
   
   # Kill API server if running
   if [[ -f pids/api-server.pid ]]; then
@@ -119,70 +153,126 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 # Print system information for debugging
-echo "=== System Information ==="
+echo "======================================================"
+echo "System Information:"
 echo "Node version: $(node -v)"
 echo "NPM version: $(npm -v)"
 echo "Current directory: $(pwd)"
-echo "Directory contents of out/: $(ls -la out/ 2>/dev/null || echo 'out/ directory not found')"
-echo "==========================="
+echo "Directory listing:"
+ls -la
+echo "======================================================"
 
-# Copy sample data files to news-data directory if they don't exist
-echo "Ensuring sample news data files exist..."
-if [ ! -f news-data/news_1.json ]; then
-  echo "Creating sample news files..."
-  
-  # Create first sample news file
-  cat > news-data/news_1.json << EOL
+# Create sample metadata.json if it doesn't exist
+if [ ! -f news-data/metadata.json ]; then
+  echo "Creating sample metadata.json..."
+  cat > news-data/metadata.json << EOL
+{
+  "last_scrape": "$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")",
+  "latest_headlines": [
+    "Gold hits new record high as inflation concerns persist",
+    "USD strengthens against major currencies after Fed comments",
+    "European markets close higher amid economic recovery hopes",
+    "Oil prices stabilize following production cut agreements",
+    "Fed officials signal potential pause in rate hikes"
+  ],
+  "sources": [
+    "Reuters",
+    "Bloomberg",
+    "CNBC"
+  ],
+  "symbols": ["XAU", "USD", "EUR", "JPY", "GBP"]
+}
+EOL
+  echo "Sample metadata.json created"
+fi
+
+# Create sample news files
+for i in {1..3}; do
+  if [ ! -f news-data/news_$i.json ]; then
+    echo "Creating sample news_$i.json file..."
+    cat > news-data/news_$i.json << EOL
 {
   "date": "$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")",
   "headlines": [
-    "Sample headline created during server startup 1",
-    "Markets show positive trends in recent session 1",
-    "Technical indicators suggest potential breakout 1"
+    "Sample headline $i-1: Markets remain stable in recent trading",
+    "Sample headline $i-2: Analysts predict continued growth",
+    "Sample headline $i-3: Economic data exceeds expectations",
+    "Sample headline $i-4: Central banks maintain current policy",
+    "Sample headline $i-5: Technical indicators suggest bullish trend"
   ],
   "snippets": [
-    "Market sentiment improved as economic data exceeded expectations.",
-    "Trading volumes increased, suggesting strong institutional participation."
+    "Market sentiment has improved following positive economic data.",
+    "Investors are watching key support and resistance levels.",
+    "Trading volumes indicate strong institutional participation."
   ],
-  "source": "startup-sample-1"
+  "source": "sample-data-$i"
 }
 EOL
+    echo "Sample news_$i.json created"
+  fi
+done
 
-  # Create second sample news file  
-  cat > news-data/news_2.json << EOL
-{
-  "date": "$(date -u -d "-1 day" +"%Y-%m-%dT%H:%M:%S.000Z")",
-  "headlines": [
-    "Sample headline created during server startup 2",
-    "Analysts predict market volatility to continue 2",
-    "Economic indicators point to stable growth 2"
-  ],
-  "snippets": [
-    "Analysts recommend watching key support and resistance levels.",
-    "Central bank communications continue to influence market direction."
-  ],
-  "source": "startup-sample-2"
-}
-EOL
-  echo "Sample news files created"
+# Start the servers - start API server first
+echo "======================================================"
+echo "Starting servers..."
+echo "======================================================"
+
+# Start API server with retries
+MAX_RETRIES=3
+retry_count=0
+api_started=false
+
+while [ $retry_count -lt $MAX_RETRIES ] && [ "$api_started" = false ]; do
+  if start_api_server; then
+    api_started=true
+  else
+    retry_count=$((retry_count + 1))
+    echo "Retry $retry_count/$MAX_RETRIES: Restarting API server..."
+    sleep 2
+  fi
+done
+
+if [ "$api_started" = false ]; then
+  echo "FATAL: Failed to start API server after $MAX_RETRIES attempts"
+  exit 1
 fi
 
-# Start the servers - start API server first, with more diagnostics
-echo "Starting API server with diagnostics..."
-export API_DEBUG=true
-export USE_FALLBACK=true
-start_api_server
-start_static_server
+# Start static server with retries
+retry_count=0
+static_started=false
+
+while [ $retry_count -lt $MAX_RETRIES ] && [ "$static_started" = false ]; do
+  if start_static_server; then
+    static_started=true
+  else
+    retry_count=$((retry_count + 1))
+    echo "Retry $retry_count/$MAX_RETRIES: Restarting static server..."
+    sleep 2
+  fi
+done
+
+if [ "$static_started" = false ]; then
+  echo "FATAL: Failed to start static server after $MAX_RETRIES attempts"
+  exit 1
+fi
 
 # Wait a moment for servers to initialize
 sleep 5
 
 # Print health check info
+echo "======================================================"
+echo "Performing health checks..."
+echo "======================================================"
+
 echo "Checking API server health..."
-curl -s http://localhost:$API_PORT/api/health || echo "API health check failed"
+curl -v http://localhost:$API_PORT/api/health || echo "API health check failed"
 
 echo "Checking static server health..."
-curl -s http://localhost:$PORT/health || echo "Static server health check failed"
+curl -v http://localhost:$PORT/health || echo "Static server health check failed"
+
+echo "======================================================"
+echo "Both servers running. Entering monitoring mode."
+echo "======================================================"
 
 # Monitor child processes and restart if needed
 echo "Starting process monitor..."
