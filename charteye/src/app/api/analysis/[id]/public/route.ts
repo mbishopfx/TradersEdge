@@ -8,24 +8,20 @@ const DEVELOPER_MODE = process.env.NODE_ENV !== 'production';
 export const dynamic = 'force-static';
 export const revalidate = 3600; // Revalidate every hour
 
-// This is required for static export with dynamic routes
+// Generate static params for the [id] route
 export async function generateStaticParams() {
   try {
-    // Get all public analysis IDs from Firestore
-    const ids = await getAllPublicAnalysisIds();
-    
-    // Return an array of objects with the id parameter
-    return ids.map((id: string) => ({
-      id: id.toString()
-    }));
+    // Try to get all public analysis IDs from Firestore
+    if (typeof getAllPublicAnalysisIds === 'function') {
+      const ids = await getAllPublicAnalysisIds();
+      return ids.map(id => ({ id }));
+    }
   } catch (error) {
-    console.error('Error generating static params:', error);
-    // Return a minimal set of IDs for fallback
-    return [
-      { id: 'fallback-1' },
-      { id: 'fallback-2' }
-    ];
+    console.error('Error getting public analysis IDs:', error);
   }
+  
+  // Fallback to placeholder 
+  return [{ id: 'placeholder' }];
 }
 
 export async function GET(

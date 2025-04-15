@@ -4,7 +4,7 @@ const fs = require('fs');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 const apiPort = process.env.API_PORT || 3001;
 
 // Determine which output directory to use
@@ -26,15 +26,49 @@ console.log(`Serving static files from ${path.join(__dirname, staticDir)}`);
 // Serve static files from the output directory
 app.use(express.static(path.join(__dirname, staticDir)));
 
-// Proxy API requests to the API server
-app.use('/api', createProxyMiddleware({
+// Setup health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    server: 'static',
+    staticDir,
+    port
+  });
+});
+
+// Configure proxy middleware for API requests with error handling
+const proxyOptions = {
   target: `http://localhost:${apiPort}`,
   changeOrigin: true,
   pathRewrite: {
     '^/api': '/api', // No rewrite needed
   },
   logLevel: 'debug',
-}));
+  onError: (err, req, res) => {
+    console.error('Proxy error:', err);
+    
+    // Try to serve a static JSON file as fallback (for static export)
+    const apiPath = req.url.replace(/^\/api/, '');
+    const staticApiPath = path.join(__dirname, staticDir, 'api', apiPath, 'index.json');
+    
+    if (fs.existsSync(staticApiPath)) {
+      console.log(`Serving static API fallback: ${staticApiPath}`);
+      res.json(JSON.parse(fs.readFileSync(staticApiPath, 'utf8')));
+    } else {
+      // If no static API fallback, return a generic response
+      res.status(502).json({
+        error: 'API server unavailable',
+        message: 'The API server is not responding. Please try again later.',
+        static: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+};
+
+// Proxy API requests to the API server
+app.use('/api', createProxyMiddleware(proxyOptions));
 
 // Handle all other routes by serving index.html
 app.get('*', (req, res) => {
@@ -46,6 +80,7 @@ app.get('*', (req, res) => {
   }
 });
 
+// Start the server
 app.listen(port, () => {
   console.log(`Static server running at http://localhost:${port}/`);
   console.log(`Serving files from ${path.join(__dirname, staticDir)}`);

@@ -119,9 +119,30 @@ cat > start.sh << EOL
 #!/bin/bash
 # Start both the static server and API server
 echo "Starting servers..."
-export PORT=\${PORT:-3000}
+
+# Set environment variables
+export PORT=\${PORT:-10000}
 export API_PORT=\${API_PORT:-3001}
-npx concurrently "node simple-server.js" "node api-server.js"
+export NODE_ENV=production
+
+# Start the API server first
+echo "Starting API server on port \$API_PORT..."
+node api-server.js &
+API_PID=\$!
+
+# Wait a moment for the API server to start
+sleep 2
+
+# Start the static file server
+echo "Starting static file server on port \$PORT..."
+node simple-server.js &
+STATIC_PID=\$!
+
+# Handle shutdown gracefully
+trap "kill \$API_PID \$STATIC_PID; exit" SIGINT SIGTERM EXIT
+
+# Keep the script running
+wait
 EOL
 
 chmod +x start.sh
