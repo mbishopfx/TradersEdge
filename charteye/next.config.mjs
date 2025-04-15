@@ -34,16 +34,6 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     unoptimized: true, // Required for static export
   },
-
-  // Exclude API routes from static export
-  exportPathMap: async function() {
-    return {
-      '/': { page: '/' },
-      '/analysis': { page: '/analysis' },
-      '/view/[id]': { page: '/view/[id]' },
-      // Add other static pages here
-    };
-  },
 };
 
 export default nextConfig; 
