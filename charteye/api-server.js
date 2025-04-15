@@ -389,45 +389,258 @@ app.get('/api/trading-insights', (req, res) => {
 
 app.get('/api/portfolio-analysis', (req, res) => {
   console.log('Handling portfolio-analysis request');
+  
+  // Extract query parameters if provided
+  const { tickers = '', holdings = '' } = req.query;
+  
+  // Parse holdings from query if available, otherwise use default
+  let portfolioHoldings = [];
+  
+  try {
+    if (holdings) {
+      portfolioHoldings = JSON.parse(holdings);
+    } else {
+      // Default holdings when none provided
+      portfolioHoldings = [
+        { symbol: 'AAPL', name: 'Apple Inc.', shares: 10, entryPrice: 150.25, currentPrice: 170.5, sector: 'Technology' },
+        { symbol: 'MSFT', name: 'Microsoft Corp.', shares: 5, entryPrice: 220.50, currentPrice: 230.75, sector: 'Technology' },
+        { symbol: 'AMZN', name: 'Amazon.com Inc.', shares: 3, entryPrice: 140.75, currentPrice: 135.20, sector: 'Consumer Cyclical' },
+        { symbol: 'GOOGL', name: 'Alphabet Inc.', shares: 4, entryPrice: 125.30, currentPrice: 131.45, sector: 'Communication Services' }
+      ];
+    }
+  } catch (error) {
+    console.error('Error parsing holdings:', error);
+    // If parsing fails, use default holdings
+    portfolioHoldings = [
+      { symbol: 'AAPL', name: 'Apple Inc.', shares: 10, entryPrice: 150.25, currentPrice: 170.5, sector: 'Technology' }
+    ];
+  }
+  
+  // Calculate portfolio metrics
+  const calculateMetrics = (holdings) => {
+    // Calculate total value, gain/loss, and sector allocation
+    let totalValue = 0;
+    let totalCost = 0;
+    let sectorAllocation = {};
+    
+    holdings.forEach(holding => {
+      const value = holding.shares * holding.currentPrice;
+      const cost = holding.shares * holding.entryPrice;
+      
+      totalValue += value;
+      totalCost += cost;
+      
+      // Track sector allocation
+      if (holding.sector) {
+        sectorAllocation[holding.sector] = (sectorAllocation[holding.sector] || 0) + value;
+      }
+    });
+    
+    // Calculate sector percentages
+    const sectors = Object.keys(sectorAllocation);
+    sectors.forEach(sector => {
+      sectorAllocation[sector] = (sectorAllocation[sector] / totalValue) * 100;
+    });
+    
+    // Calculate diversification score (0-10)
+    // Higher score for more sectors and more balanced allocation
+    let diversificationScore = Math.min(sectors.length * 2, 10);
+    
+    // Reduce score if heavily concentrated in one sector
+    const maxSectorAllocation = Math.max(...Object.values(sectorAllocation));
+    if (maxSectorAllocation > 70) diversificationScore -= 5;
+    else if (maxSectorAllocation > 50) diversificationScore -= 3;
+    
+    // Risk assessment
+    // Simple heuristic based on sector concentration and number of holdings
+    const volatilityScore = Math.max(2, Math.min(10, 10 - (holdings.length / 2)));
+    
+    // Sharpe ratio (simplified mock calculation)
+    // In reality would need historical returns and risk-free rate
+    const sharpeRatio = (Math.random() * 0.5 + 0.5).toFixed(2);
+    
+    // Beta (portfolio's correlation to the market)
+    const betaAverage = (Math.random() * 0.5 + 0.7).toFixed(2);
+    
+    return {
+      totalValue,
+      totalCost,
+      percentChange: ((totalValue - totalCost) / totalCost) * 100,
+      sectorAllocation,
+      diversificationScore: diversificationScore.toFixed(1),
+      volatility: volatilityScore.toFixed(1),
+      sharpeRatio,
+      betaAverage
+    };
+  };
+  
+  const metrics = calculateMetrics(portfolioHoldings);
+  
+  // Format holdings with calculated metrics for each
+  const holdingsWithMetrics = portfolioHoldings.map(holding => {
+    const currentValue = holding.shares * holding.currentPrice;
+    const costBasis = holding.shares * holding.entryPrice;
+    const percentChange = ((holding.currentPrice - holding.entryPrice) / holding.entryPrice) * 100;
+    
+    return {
+      ...holding,
+      currentValue,
+      costBasis,
+      percentChange,
+      weight: (currentValue / metrics.totalValue) * 100
+    };
+  });
+  
+  // Generate recommendations based on portfolio composition
+  const generateRecommendations = (holdings, metrics) => {
+    const recommendations = [];
+    
+    // Check for sector concentration
+    const sectors = Object.keys(metrics.sectorAllocation);
+    const maxSector = sectors.reduce((a, b) => 
+      metrics.sectorAllocation[a] > metrics.sectorAllocation[b] ? a : b, sectors[0]);
+    
+    if (metrics.sectorAllocation[maxSector] > 50) {
+      recommendations.push(`Consider reducing exposure to ${maxSector} sector (${metrics.sectorAllocation[maxSector].toFixed(1)}% of portfolio)`);
+    }
+    
+    // Check for diversification
+    if (holdings.length < 5) {
+      recommendations.push('Increase portfolio diversification by adding more holdings');
+    }
+    
+    // Check for performance
+    if (metrics.percentChange < 0) {
+      recommendations.push('Review underperforming positions for potential rebalancing');
+    }
+    
+    return recommendations;
+  };
+  
+  const recommendations = generateRecommendations(portfolioHoldings, metrics);
+  
   res.json({
+    success: true,
     portfolioStats: {
-      totalValue: 125000,
-      dailyChange: 1.2,
-      riskScore: 65,
-      diversificationScore: 72
+      totalValue: metrics.totalValue.toFixed(2),
+      totalCost: metrics.totalCost.toFixed(2),
+      percentChange: metrics.percentChange.toFixed(2),
+      holdings: portfolioHoldings.length
     },
-    holdings: [
-      { symbol: 'AAPL', weight: 15.2, performance: 3.4 },
-      { symbol: 'MSFT', weight: 12.5, performance: 2.1 },
-      { symbol: 'AMZN', weight: 8.7, performance: -1.2 }
-    ],
-    recommendations: [
-      'Consider reducing technology exposure',
-      'Add more defensive assets for balance'
-    ],
-    success: true
+    riskAssessment: {
+      volatility: metrics.volatility,
+      sharpeRatio: metrics.sharpeRatio,
+      betaAverage: metrics.betaAverage,
+      diversificationScore: metrics.diversificationScore
+    },
+    sectorAllocation: Object.entries(metrics.sectorAllocation).map(([sector, percentage]) => ({
+      sector,
+      percentage: percentage.toFixed(1)
+    })),
+    holdings: holdingsWithMetrics.map(h => ({
+      symbol: h.symbol,
+      name: h.name,
+      shares: h.shares,
+      entryPrice: h.entryPrice.toFixed(2),
+      currentPrice: h.currentPrice.toFixed(2),
+      currentValue: h.currentValue.toFixed(2),
+      percentChange: h.percentChange.toFixed(2),
+      weight: h.weight.toFixed(1)
+    })),
+    recommendations
   });
 });
 
 app.get('/api/risk-analysis', (req, res) => {
   console.log('Handling risk-analysis request');
+  
+  // Extract query parameters if provided
+  const { holdings = '', portfolioId = '' } = req.query;
+  
+  // Generate realistic risk metrics based on the screenshot values
+  const generateRiskMetrics = () => {
+    return {
+      volatility: {
+        value: Math.random() * 5 + 15, // Between 15-20%
+        rating: 'N/A',
+        description: 'Annualized standard deviation of returns'
+      },
+      sharpeRatio: {
+        value: Math.random() * 0.5 + 0.5, // Between 0.5-1.0
+        rating: 'N/A',
+        description: 'Risk-adjusted return relative to risk-free rate'
+      },
+      betaAverage: {
+        value: Math.random() * 0.5 + 0.7, // Between 0.7-1.2
+        rating: 'N/A',
+        description: 'Portfolio correlation to broader market'
+      },
+      maxDrawdown: {
+        value: -(Math.random() * 10 + 8), // Between -8% and -18%
+        rating: 'N/A',
+        description: 'Maximum observed loss from peak to trough'
+      }
+    };
+  };
+  
+  // Generate risk factors with exposure ratings
+  const generateRiskFactors = () => {
+    return [
+      {
+        factor: 'Market Risk',
+        exposure: Math.random() > 0.5 ? 'High' : 'Medium',
+        impact: 'Significant',
+        description: 'Risk from overall market movements'
+      },
+      {
+        factor: 'Sector Concentration',
+        exposure: Math.random() > 0.6 ? 'High' : 'Medium',
+        impact: 'Moderate',
+        description: 'Risk from overexposure to specific sectors'
+      },
+      {
+        factor: 'Interest Rate Sensitivity',
+        exposure: Math.random() > 0.4 ? 'Medium' : 'Low',
+        impact: 'Moderate',
+        description: 'Portfolio sensitivity to interest rate changes'
+      },
+      {
+        factor: 'Liquidity Risk',
+        exposure: 'Low',
+        impact: 'Minor',
+        description: 'Risk of difficulty selling assets without loss'
+      }
+    ];
+  };
+  
+  // Generate diversification assessment
+  const generateDiversificationAssessment = () => {
+    // N/A/10 score as seen in the screenshot
+    const score = 'N/A/10';
+    const level = 'N/A';
+    
+    return {
+      score,
+      level,
+      sectorExposure: [
+        { sector: 'Technology', percentage: 70 },
+        { sector: 'Consumer Cyclical', percentage: 20 },
+        { sector: 'Communication Services', percentage: 10 }
+      ]
+    };
+  };
+  
   res.json({
-    riskMetrics: {
-      volatility: 18.5,
-      maxDrawdown: 12.3,
-      sharpeRatio: 1.2,
-      sortinoRatio: 1.5
-    },
-    riskFactors: [
-      { factor: 'Market Risk', exposure: 'High', impact: 'Significant' },
-      { factor: 'Interest Rate Risk', exposure: 'Medium', impact: 'Moderate' },
-      { factor: 'Sector Concentration', exposure: 'High', impact: 'Significant' }
-    ],
+    success: true,
+    portfolioId: portfolioId || 'default',
+    riskMetrics: generateRiskMetrics(),
+    riskFactors: generateRiskFactors(),
+    diversification: generateDiversificationAssessment(),
     recommendations: [
-      'Increase position sizing controls',
-      'Consider hedging market exposure'
-    ],
-    success: true
+      'Consider adding assets from different sectors to improve diversification',
+      'Monitor technology sector concentration',
+      'Evaluate hedging strategies to mitigate market risk'
+    ]
   });
 });
 
