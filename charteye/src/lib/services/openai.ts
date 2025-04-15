@@ -401,18 +401,11 @@ export async function analyzeEconomicNews(newsItems: string[], marketData?: stri
     return {
       summary: 'Recent economic data suggests moderate growth with inflation gradually declining. Central banks may maintain current monetary policy in the near term.',
       marketSentiment: marketImpacts[Math.floor(Math.random() * marketImpacts.length)],
-      keyEvents: [
-        {
-          event: 'Federal Reserve Meeting',
-          impact: marketImpacts[Math.floor(Math.random() * marketImpacts.length)],
-          analysis: 'The Fed indicated a possible rate cut in the coming months if inflation continues to decline.'
-        },
-        {
-          event: 'Unemployment Report',
-          impact: marketImpacts[Math.floor(Math.random() * marketImpacts.length)],
-          analysis: 'Job growth exceeded expectations, suggesting economic resilience.'
-        }
-      ],
+      keyEvents: newsItems.map((item, i) => ({
+        event: item,
+        impact: marketImpacts[Math.floor(Math.random() * marketImpacts.length)],
+        analysis: `This event may ${Math.random() > 0.5 ? 'positively' : 'negatively'} affect market direction in the short term.`
+      })),
       sectorImpact: sectors.map(sector => ({
         sector,
         impact: marketImpacts[Math.floor(Math.random() * marketImpacts.length)],
@@ -440,7 +433,29 @@ export async function analyzeEconomicNews(newsItems: string[], marketData?: stri
       messages: [
         {
           role: "system",
-          content: `You are an expert financial analyst specializing in economic news interpretation. Analyze the provided news items and explain their potential impact on markets. Identify which sectors may be affected, market sentiment, and possible trading opportunities. Use the real-time market data provided to inform your analysis and recommend specific trading actions based on the news in the context of current market conditions. Format your response as JSON.`
+          content: `You are an expert financial analyst specializing in economic news interpretation. Analyze the provided news items and explain their potential impact on markets. Identify which sectors may be affected, market sentiment, and possible trading opportunities. Use the real-time market data provided to inform your analysis and recommend specific trading actions based on the news in the context of current market conditions. Format your response as JSON with the following structure:
+{
+  "summary": "Overall summary of the analysis",
+  "marketSentiment": "Overall market sentiment (Positive/Negative/Neutral/Mixed)",
+  "keyEvents": [
+    {
+      "event": "Event description",
+      "impact": "Impact type (Positive/Negative/Neutral)",
+      "analysis": "Detailed analysis of impact"
+    }
+  ],
+  "sectorImpact": [
+    {
+      "sector": "Sector name",
+      "impact": "Impact type (Positive/Negative/Neutral)",
+      "details": "Impact details"
+    }
+  ],
+  "tradingOpportunities": [
+    "Description of opportunity 1",
+    "Description of opportunity 2"
+  ]
+}`
         },
         {
           role: "user",
@@ -451,8 +466,21 @@ export async function analyzeEconomicNews(newsItems: string[], marketData?: stri
       response_format: { type: "json_object" }
     });
 
-    const responseContent = response.choices[0]?.message?.content || '{}';
-    const analysisData = JSON.parse(responseContent);
+    let analysisData;
+    try {
+      const responseContent = response.choices[0]?.message?.content || '{}';
+      analysisData = JSON.parse(responseContent);
+      
+      // Ensure all required fields are present
+      analysisData.summary = analysisData.summary || 'Analysis not available';
+      analysisData.marketSentiment = analysisData.marketSentiment || 'Neutral';
+      analysisData.keyEvents = analysisData.keyEvents || [];
+      analysisData.sectorImpact = analysisData.sectorImpact || [];
+      analysisData.tradingOpportunities = analysisData.tradingOpportunities || [];
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      throw new Error('Invalid response format from analysis service');
+    }
     
     return analysisData;
   } catch (error) {
@@ -462,18 +490,11 @@ export async function analyzeEconomicNews(newsItems: string[], marketData?: stri
     return {
       summary: 'Recent economic news indicates mixed signals with inflation concerns balanced against solid employment data.',
       marketSentiment: 'Mixed',
-      keyEvents: [
-        {
-          event: 'CPI Data Release',
-          impact: 'Negative',
-          analysis: 'Inflation came in higher than expected, raising concerns about aggressive monetary policy.'
-        },
-        {
-          event: 'GDP Growth Figures',
-          impact: 'Positive',
-          analysis: 'Economic growth exceeded forecasts, suggesting resilience despite higher interest rates.'
-        }
-      ],
+      keyEvents: newsItems.map((item, i) => ({
+        event: item,
+        impact: i % 2 === 0 ? 'Positive' : 'Negative',
+        analysis: `This news item suggests ${i % 2 === 0 ? 'positive' : 'negative'} implications for market direction.`
+      })),
       sectorImpact: [
         {
           sector: 'Technology',
