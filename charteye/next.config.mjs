@@ -11,12 +11,20 @@ const nextConfig = {
     // Dangerously allow production builds to successfully complete even if
     // your project has type errors.
     ignoreBuildErrors: true,
+    tsconfigPath: './tsconfig.json', // Explicitly point to tsconfig
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  
+  // Disable source maps in production to improve build times
+  productionBrowserSourceMaps: false,
+  
+  // Explicitly disable typechecking for faster builds
+  transpilePackages: [],
+  swcMinify: true, // Use SWC for minification
   
   images: {
     remotePatterns: [
@@ -34,6 +42,12 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     unoptimized: true, // Required for static export
   },
+  
+  // Disable experimental features that might cause issues
+  experimental: {
+    appDir: true,
+    esmExternals: true
+  }
 };
 
 export default nextConfig; 

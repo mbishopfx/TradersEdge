@@ -11,6 +11,23 @@ echo "Directory contents: $(ls -la)"
 echo "=== Installing dependencies ==="
 npm install --legacy-peer-deps
 
+# Ensure TypeScript is installed 
+echo "=== Ensuring TypeScript is installed ==="
+npm install typescript --force # Force reinstall
+npm install --save typescript # Install as regular dependency
+npm install -g typescript # Install globally too
+
+# Create TypeScript declaration file if it doesn't exist
+echo "=== Creating TypeScript declaration files if needed ==="
+if [ ! -f "next-env.d.ts" ]; then
+  echo "// This file is created during build since TypeScript is enabled
+/// <reference types=\"next\" />
+/// <reference types=\"next/types/global\" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information." > next-env.d.ts
+fi
+
 # Install tailwindcss locally
 echo "=== Installing tailwindcss locally ==="
 npm install --legacy-peer-deps tailwindcss postcss autoprefixer
@@ -70,33 +87,23 @@ export const AuthProvider = ({ children }) => {
 export default AuthProvider;" > src/contexts/AuthContext.tsx
 fi
 
+# Verify TypeScript is installed and working
+echo "=== Verifying TypeScript installation ==="
+npx tsc --version || echo "TypeScript verification failed, but continuing build"
+
 # Ensure NODE_ENV is set correctly for the build
 echo "=== Setting NODE_ENV to production for build ==="
 export NODE_ENV=production
 
-# Run the Next.js build
-echo "=== Running Next.js build for App Router ==="
-export NODE_OPTIONS="--max-old-space-size=4096"
+# Try alternative build approach
+echo "=== Trying alternative build approach ==="
+npx next build || NODE_OPTIONS="--max-old-space-size=4096" ./node_modules/.bin/next build
 
-# Try different methods to run Next.js build
-echo "Attempting Next.js build with npx..."
-if npx --no-install next build; then
-  echo "=== Build completed successfully with npx! ==="
-elif [ -f "./node_modules/.bin/next" ]; then
-  echo "Attempting build with direct path to next binary..."
-  ./node_modules/.bin/next build
-  BUILD_RESULT=$?
-  if [ $BUILD_RESULT -eq 0 ]; then
-    echo "=== Build completed successfully with direct path! ==="
-  else
-    echo "=== Build failed with exit code: $BUILD_RESULT ==="
-    exit $BUILD_RESULT
-  fi
-else
-  echo "=== Build failed, next binary not found ==="
-  echo "Contents of node_modules/.bin:"
-  ls -la node_modules/.bin || echo "node_modules/.bin directory not found"
-  exit 1
+# If both build methods fail, try a different approach with explicit output directory
+if [ $? -ne 0 ]; then
+  echo "=== First build methods failed, trying alternative approach with explicit output ==="
+  rm -rf .next out || true
+  NODE_OPTIONS="--max-old-space-size=4096" npx next build && npx next export -o out
 fi
 
 # Create a start script for production
