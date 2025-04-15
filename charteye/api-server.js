@@ -223,14 +223,17 @@ app.get('/api/analysis/:id/public', async (req, res) => {
   }
 });
 
-// Health check endpoint
+// Health check endpoint - Make it the first route for reliability
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  // Send a quick response for health checks
+  res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     port: port,
-    server: 'api'
+    server: 'api',
+    firebaseAvailable: !!firebaseAdmin,
+    uptime: process.uptime()
   });
 });
 
