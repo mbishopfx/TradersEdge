@@ -8,7 +8,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: API_PORT
         value: 3001
       - key: NEXT_PUBLIC_FIREBASE_API_KEY

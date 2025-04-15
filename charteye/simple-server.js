@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
@@ -37,14 +38,37 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Helper function to check if API server is running
-const checkApiServer = async () => {
-  try {
-    const response = await fetch(`http://localhost:${apiPort}/api/health`);
-    return response.ok;
-  } catch (e) {
-    return false;
-  }
+// Helper function to check if API server is running using http module instead of fetch
+const checkApiServer = () => {
+  return new Promise((resolve) => {
+    const req = http.get(`http://localhost:${apiPort}/api/health`, (res) => {
+      if (res.statusCode === 200) {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          console.log('API server health check response:', data);
+          resolve(true);
+        });
+      } else {
+        console.log(`API server returned status: ${res.statusCode}`);
+        resolve(false);
+      }
+    });
+    
+    req.on('error', (err) => {
+      console.log(`API server health check error: ${err.message}`);
+      resolve(false);
+    });
+    
+    // Set timeout to 2 seconds
+    req.setTimeout(2000, () => {
+      console.log('API server health check timed out');
+      req.destroy();
+      resolve(false);
+    });
+  });
 };
 
 // Configure proxy middleware for API requests with error handling

@@ -5,8 +5,8 @@
   "description": "Root package for ChartEye project",
   "scripts": {
     "dev": "cd charteye && npm run dev",
-    "build": "npm install --save-dev typescript && chmod +x build.sh && ./build.sh",
-    "start": "node simple-server.js",
+    "build": "chmod +x build.sh && ./build.sh",
+    "start": "cd charteye && chmod +x start.sh && ./start.sh",
     "lint": "cd charteye && npm run lint",
     "test:payment": "node testPaymentPrompt.js",
     "test:payment:ui": "bash runPaymentPromptTest.sh",
@@ -17,8 +17,5 @@
     "@langchain/community": "^0.3.39",
     "node-fetch": "^2.6.7",
     "puppeteer": "^22.9.1"
-  },
-  "devDependencies": {
-    "typescript": "^5.3.3"
   }
 }
