@@ -1,73 +1,41 @@
 services:
+  # Frontend service
   - type: web
-    name: charteye
+    name: charteye-frontend
     runtime: node
-    buildCommand: npm install -g typescript && npm install --legacy-peer-deps && npm run build
-    startCommand: chmod +x ./start.sh && ./start.sh
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-      - key: API_PORT
-        value: 3001
-      - key: RENDER
-        value: "true"
-      - key: NEXT_PUBLIC_FIREBASE_API_KEY
-        value: AIzaSyBV1JmWmbq9Zz78aU3PyBu2ERgvQNKDJiU
-      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-        value: charteye-5be44.firebaseapp.com
-      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        value: charteye-5be44
-      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-        value: charteye-5be44.firebasestorage.app
-      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-        value: "1088594164829"
-      - key: NEXT_PUBLIC_FIREBASE_APP_ID
-        value: "1:1088594164829:web:c159dd2c36161e532fe1b4"
-      - key: NEXT_PUBLIC_FIREBASE_DATABASE_URL
-        value: https://charteye-5be44-default-rtdb.firebaseio.com
+
+  # Backend service
+  - type: worker
+    name: charteye-backend
+    runtime: node
+    buildCommand: cd functions && npm install
+    startCommand: cd functions && npm run serve
+    envVars:
       - key: FIREBASE_PROJECT_ID
-        value: charteye-5be44
-      - key: FIREBASE_STORAGE_BUCKET
-        value: charteye-5be44.firebasestorage.app
-      - key: API_DEBUG
-        value: "true"
-      - key: USE_FALLBACK
-        value: "true"
-      - key: NEWS_DATA_DIR
-        value: /opt/render/project/src/charteye/news-data
+        sync: false
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: SQUARE_ACCESS_TOKEN
-        sync: false
-      - key: SQUARE_LOCATION_ID
-        sync: false
-      - key: TWITTER_API_KEY
-        sync: false
-      - key: TWITTER_API_SECRET
-        sync: false
-      - key: FACEBOOK_APP_ID
-        sync: false
-      - key: FACEBOOK_APP_SECRET
-        sync: false
-      - key: LINKEDIN_CLIENT_ID
-        sync: false
-      - key: LINKEDIN_CLIENT_SECRET
-        sync: false
-      - key: NEXT_PUBLIC_APP_URL
-        sync: false
-    healthCheckPath: /health
-    buildFilter:
-      paths:
-      - charteye/**
-      ignoredPaths:
-      - charteye/node_modules/**
-    autoDeploy: true
+      - key: NODE_ENV
+        value: production
 
   - type: cron
     name: charteye-news-scraper
